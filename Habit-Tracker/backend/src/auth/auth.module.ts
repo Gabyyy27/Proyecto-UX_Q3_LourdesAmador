@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
+import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
 @Module({
   imports: [
@@ -39,11 +40,13 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
 
   controllers: [AuthController],
 
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
 
   exports: [
     AuthService,
     JwtModule,
+    JwtAuthGuard,
+    PassportModule,
   ],
 })
 export class AuthModule { }
