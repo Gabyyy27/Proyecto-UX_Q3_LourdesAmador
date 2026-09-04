@@ -14,6 +14,7 @@ import {
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 import {
   type ChangeEvent,
@@ -37,6 +38,7 @@ type LoginFormErrors =
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { startSession } = useAuth();
 
   const registered =
     searchParams.get("registered") === "1";
@@ -50,11 +52,13 @@ export function LoginForm() {
   const [errors, setErrors] =
     useState<LoginFormErrors>({});
 
-    {registered ? (
-  <Alert severity="success">
-    Cuenta creada correctamente. Ya puedes iniciar sesión.
-  </Alert>
-) : null}
+  {
+    registered ? (
+      <Alert severity="success">
+        Cuenta creada correctamente. Ya puedes iniciar sesión.
+      </Alert>
+    ) : null
+  }
   const [generalError, setGeneralError] =
     useState("");
 
@@ -114,19 +118,9 @@ export function LoginForm() {
       const response =
         await login(validData);
 
-      localStorage.setItem(
-        "accessToken",
-        response.accessToken,
-      );
+      startSession(response);
 
-      localStorage.setItem(
-        "user",
-        JSON.stringify(
-          response.user,
-        ),
-      );
-
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } catch (error) {
       setGeneralError(
         error instanceof Error

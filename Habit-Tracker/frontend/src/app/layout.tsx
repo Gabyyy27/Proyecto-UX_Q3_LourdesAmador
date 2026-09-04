@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { AppRoot } from "@/components/layout/AppRoot";
+import { AuthProvider } from "@/context/AuthContext";
 import { ThemeRegistry } from "@/theme/ThemeRegistry";
 
 import "./globals.css";
@@ -22,7 +24,11 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <ThemeRegistry>
-          {children}
+          <AuthProvider>
+            <AppRoot>
+              {children}
+            </AppRoot>
+          </AuthProvider>
         </ThemeRegistry>
       </body>
     </html>
