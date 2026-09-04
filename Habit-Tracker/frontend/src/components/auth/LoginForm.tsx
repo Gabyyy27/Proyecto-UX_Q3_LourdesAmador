@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   type ChangeEvent,
@@ -23,11 +23,7 @@ import {
 
 import { loginSchema } from "@/schemas/login.schema";
 import { login } from "@/services/auth.service";
-import {redirect} from "next/navigation";
 
-export default function HomePage() {
-  redirect("/login");
-}
 type LoginFormData = {
   email: string;
   password: string;
@@ -40,6 +36,10 @@ type LoginFormErrors =
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const registered =
+    searchParams.get("registered") === "1";
 
   const [form, setForm] =
     useState<LoginFormData>({
@@ -50,6 +50,11 @@ export function LoginForm() {
   const [errors, setErrors] =
     useState<LoginFormErrors>({});
 
+    {registered ? (
+  <Alert severity="success">
+    Cuenta creada correctamente. Ya puedes iniciar sesión.
+  </Alert>
+) : null}
   const [generalError, setGeneralError] =
     useState("");
 

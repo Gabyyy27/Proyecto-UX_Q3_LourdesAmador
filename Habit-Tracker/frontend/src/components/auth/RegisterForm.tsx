@@ -21,34 +21,32 @@ import {
   useState,
 } from "react";
 
-import { loginSchema } from "@/schemas/login.schema";
-import { login } from "@/services/auth.service";
-import {redirect} from "next/navigation";
+import { registerSchema } from "@/schemas/register.schema";
+import { register } from "@/services/auth.service";
 
-export default function HomePage() {
-  redirect("/login");
-}
-type LoginFormData = {
+type RegisterFormData = {
+  name: string;
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
-type LoginFormErrors =
-  Partial<
-    Record<keyof LoginFormData, string>
-  >;
+type RegisterFormErrors = Partial<
+  Record<keyof RegisterFormData, string>
+>;
 
-export function LoginForm() {
+export function RegisterForm() {
   const router = useRouter();
 
-  const [form, setForm] =
-    useState<LoginFormData>({
-      email: "",
-      password: "",
-    });
+  const [form, setForm] = useState<RegisterFormData>({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
 
   const [errors, setErrors] =
-    useState<LoginFormErrors>({});
+    useState<RegisterFormErrors>({});
 
   const [generalError, setGeneralError] =
     useState("");
@@ -57,27 +55,23 @@ export function LoginForm() {
     useState(false);
 
   function validate() {
-    const result =
-      loginSchema.safeParse(form);
+    const result = registerSchema.safeParse(form);
 
     if (!result.success) {
-      const newErrors:
-        LoginFormErrors = {};
+      const newErrors: RegisterFormErrors = {};
 
-      result.error.issues.forEach(
-        (issue) => {
-          const field =
-            issue.path[0];
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0];
 
-          if (
-            field === "email" ||
-            field === "password"
-          ) {
-            newErrors[field] =
-              issue.message;
-          }
-        },
-      );
+        if (
+          field === "name" ||
+          field === "email" ||
+          field === "password" ||
+          field === "confirmPassword"
+        ) {
+          newErrors[field] = issue.message;
+        }
+      });
 
       setErrors(newErrors);
 
@@ -90,8 +84,7 @@ export function LoginForm() {
   }
 
   async function handleSubmit(
-    event:
-      FormEvent<HTMLFormElement>,
+    event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
@@ -106,88 +99,65 @@ export function LoginForm() {
     try {
       setLoading(true);
 
-      const response =
-        await login(validData);
+      await register({
+        name: validData.name,
+        email: validData.email,
+        password: validData.password,
+      });
 
-      localStorage.setItem(
-        "accessToken",
-        response.accessToken,
-      );
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(
-          response.user,
-        ),
-      );
-
-      router.push("/dashboard");
+      router.replace("/login?registered=1");
     } catch (error) {
       setGeneralError(
         error instanceof Error
           ? error.message
-          : "No se pudo iniciar sesión",
+          : "No se pudo crear la cuenta",
       );
     } finally {
       setLoading(false);
     }
   }
 
-  function handleEmailChange(
-    event:
-      ChangeEvent<HTMLInputElement>,
+  function handleChange(
+    field: keyof RegisterFormData,
   ) {
-    setForm({
-      ...form,
-      email: event.target.value,
-    });
-  }
-
-  function handlePasswordChange(
-    event:
-      ChangeEvent<HTMLInputElement>,
-  ) {
-    setForm({
-      ...form,
-      password: event.target.value,
-    });
+    return (
+      event: ChangeEvent<HTMLInputElement>,
+    ) => {
+      setForm({
+        ...form,
+        [field]: event.target.value,
+      });
+    };
   }
 
   return (
     <Box
       sx={{
         minHeight: "100dvh",
-
         display: "flex",
-
         alignItems: "center",
         justifyContent: "center",
-
         bgcolor: "background.default",
-
         px: {
           xs: 2,
           sm: 3,
         },
-
         py: 4,
       }}
     >
       <Box
         sx={{
           width: "100%",
-          maxWidth: 430,
+          maxWidth: 460,
         }}
       >
-        <Stack
-          spacing={3}
-          sx={{
-            textAlign: "center",
-          }}
-        >
+        <Stack spacing={3}>
           <Typography
             variant="h4"
             component="h1"
+            sx={{
+              textAlign: "center",
+            }}
           >
             Habit Tracker
           </Typography>
@@ -206,24 +176,19 @@ export function LoginForm() {
                 spacing={3}
                 onSubmit={handleSubmit}
               >
-                <Box
-                  sx={{
-                    textAlign: "left",
-                  }}
-                >
+                <Box>
                   <Typography
                     variant="h5"
                     component="h2"
                     gutterBottom
                   >
-                    Iniciar sesión
+                    Crear cuenta
                   </Typography>
 
                   <Typography
                     color="text.secondary"
                   >
-                    Accede para continuar
-                    con tus hábitos.
+                    Completa tus datos para comenzar.
                   </Typography>
                 </Box>
 
@@ -234,16 +199,22 @@ export function LoginForm() {
                 ) : null}
 
                 <TextField
+                  label="Nombre completo"
+                  value={form.name}
+                  onChange={handleChange("name")}
+                  error={!!errors.name}
+                  helperText={errors.name}
+                  fullWidth
+                  autoComplete="name"
+                />
+
+                <TextField
                   label="Correo"
                   type="email"
                   value={form.email}
-                  onChange={
-                    handleEmailChange
-                  }
+                  onChange={handleChange("email")}
                   error={!!errors.email}
-                  helperText={
-                    errors.email
-                  }
+                  helperText={errors.email}
                   fullWidth
                   autoComplete="email"
                 />
@@ -251,20 +222,27 @@ export function LoginForm() {
                 <TextField
                   label="Contraseña"
                   type="password"
-                  value={
-                    form.password
-                  }
-                  onChange={
-                    handlePasswordChange
-                  }
-                  error={
-                    !!errors.password
-                  }
+                  value={form.password}
+                  onChange={handleChange("password")}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  fullWidth
+                  autoComplete="new-password"
+                />
+
+                <TextField
+                  label="Confirmar contraseña"
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={handleChange(
+                    "confirmPassword",
+                  )}
+                  error={!!errors.confirmPassword}
                   helperText={
-                    errors.password
+                    errors.confirmPassword
                   }
                   fullWidth
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
 
                 <Stack
@@ -280,11 +258,11 @@ export function LoginForm() {
                 >
                   <Button
                     component={Link}
-                    href="/register"
+                    href="/login"
                     variant="text"
                     disabled={loading}
                   >
-                    Crear cuenta
+                    Ya tengo cuenta
                   </Button>
 
                   <Button
@@ -300,7 +278,7 @@ export function LoginForm() {
                         color="inherit"
                       />
                     ) : (
-                      "Iniciar sesión"
+                      "Registrarme"
                     )}
                   </Button>
                 </Stack>
