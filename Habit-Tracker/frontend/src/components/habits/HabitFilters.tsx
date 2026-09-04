@@ -34,7 +34,7 @@ export function HabitFilters({
       value: "active",
     },
     {
-      label: "Finalizados",
+      label: "Inactivos",
       value: "finished",
     },
   ];
