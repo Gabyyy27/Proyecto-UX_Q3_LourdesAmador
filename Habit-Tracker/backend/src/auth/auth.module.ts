@@ -1,17 +1,33 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 
 import { UsersModule } from '../users/users.module.js';
+
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-import { JwtStrategy } from './strategies/jwt.strategy.js';
+
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+
+import {
+  Session,
+  SessionSchema,
+} from './schemas/session.schema.js';
+
+import { JwtStrategy } from './strategies/jwt.strategy.js';
 
 @Module({
   imports: [
     UsersModule,
+
+    MongooseModule.forFeature([
+      {
+        name: Session.name,
+        schema: SessionSchema,
+      },
+    ]),
 
     PassportModule.register({
       defaultStrategy: 'jwt',
@@ -19,6 +35,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
     JwtModule.registerAsync({
       inject: [ConfigService],
+
       useFactory: (
         configService: ConfigService,
       ) => ({
@@ -38,9 +55,15 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
     }),
   ],
 
-  controllers: [AuthController],
+  controllers: [
+    AuthController,
+  ],
 
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    JwtAuthGuard,
+  ],
 
   exports: [
     AuthService,
@@ -49,4 +72,4 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
     PassportModule,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}

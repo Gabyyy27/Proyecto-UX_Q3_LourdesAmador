@@ -23,7 +23,6 @@ import {
 } from "react";
 
 import { loginSchema } from "@/schemas/login.schema";
-import { login } from "@/services/auth.service";
 
 type LoginFormData = {
   email: string;
@@ -38,7 +37,7 @@ type LoginFormErrors =
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { startSession } = useAuth();
+  const { login } = useAuth();
 
   const registered =
     searchParams.get("registered") === "1";
@@ -116,11 +115,12 @@ export function LoginForm() {
       setLoading(true);
 
       const response =
-        await login(validData);
+        await login(
+  validData.email,
+  validData.password
+);
 
-      startSession(response);
-
-      router.replace("/dashboard");
+router.replace("/dashboard");
     } catch (error) {
       setGeneralError(
         error instanceof Error

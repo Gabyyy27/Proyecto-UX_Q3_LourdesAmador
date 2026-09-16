@@ -1,6 +1,8 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
+
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
@@ -8,10 +10,17 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
+  // Permite que NestJS pueda leer las cookies
+  // enviadas por el navegador.
+  app.use(cookieParser());
+
+  // Permite peticiones desde nuestro frontend
+  // incluyendo cookies.
   app.enableCors({
     origin:
       configService.get<string>('FRONTEND_URL') ??
       'http://localhost:3000',
+
     credentials: true,
   });
 

@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import api from "./api";
 
 import type {
   CreateHabitData,
@@ -6,77 +6,73 @@ import type {
   UpdateHabitData,
 } from "@/types/habit";
 
-export function getHabits(): Promise<Habit[]> {
-  return apiFetch<Habit[]>(
-    "/habits",
-    {
-      method: "GET",
-      authenticated: true,
-    },
-  );
+export async function getHabits(): Promise<Habit[]> {
+  const response =
+    await api.get<Habit[]>(
+      "/habits",
+    );
+
+  return response.data;
 }
 
-export function getHabit(
+export async function getHabit(
   habitId: string,
 ): Promise<Habit> {
-  return apiFetch<Habit>(
-    `/habits/${habitId}`,
-    {
-      method: "GET",
-      authenticated: true,
-    },
-  );
+  const response =
+    await api.get<Habit>(
+      `/habits/${habitId}`,
+    );
+
+  return response.data;
 }
 
-export function createHabit(
+export async function createHabit(
   data: CreateHabitData,
 ): Promise<Habit> {
-  return apiFetch<Habit>(
-    "/habits",
-    {
-      method: "POST",
-      authenticated: true,
-      body: JSON.stringify(data),
-    },
-  );
+  const response =
+    await api.post<Habit>(
+      "/habits",
+      data,
+    );
+
+  return response.data;
 }
 
-export function updateHabit(
+export async function updateHabit(
   habitId: string,
   data: UpdateHabitData,
 ): Promise<Habit> {
-  return apiFetch<Habit>(
-    `/habits/${habitId}`,
-    {
-      method: "PATCH",
-      authenticated: true,
-      body: JSON.stringify(data),
-    },
-  );
+  const response =
+    await api.patch<Habit>(
+      `/habits/${habitId}`,
+      data,
+    );
+
+  return response.data;
 }
 
-export function deleteHabit(
+export async function deleteHabit(
   habitId: string,
 ): Promise<{
   message: string;
 }> {
-  return apiFetch(
-    `/habits/${habitId}`,
-    {
-      method: "DELETE",
-      authenticated: true,
-    },
-  );
+  const response =
+    await api.delete<{
+      message: string;
+    }>(
+      `/habits/${habitId}`,
+    );
+
+  return response.data;
 }
 
-export function toggleHabit(
+export async function toggleHabit(
   habitId: string,
 ): Promise<Habit> {
-  return apiFetch<Habit>(
-    `/habits/${habitId}/toggle`,
-    {
-      method: "PATCH",
-      authenticated: true,
-    },
-  );
+  const response =
+    await api.patch<Habit>(
+      `/habits/${habitId}/toggle`,
+    );
+
+  return response.data;
 }

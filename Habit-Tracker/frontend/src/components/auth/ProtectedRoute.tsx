@@ -25,19 +25,19 @@ export function ProtectedRoute({
 
   const {
     loading,
-    isAuthenticated,
+    authenticated,
   } = useAuth();
 
   useEffect(() => {
     if (
       !loading &&
-      !isAuthenticated
+      !authenticated
     ) {
       router.replace("/login");
     }
   }, [
     loading,
-    isAuthenticated,
+    authenticated,
     router,
   ]);
 
@@ -56,7 +56,7 @@ export function ProtectedRoute({
     );
   }
 
-  if (!isAuthenticated) {
+  if (!authenticated) {
     return null;
   }
 

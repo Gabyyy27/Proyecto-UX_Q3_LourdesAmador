@@ -2,157 +2,139 @@
 
 import {
   createContext,
-  type ReactNode,
+  useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
-import { getProfile } from "@/services/auth.service";
+import type { ReactNode } from "react";
 
-import type {
-  LoginResponse,
-  User,
-} from "@/types/auth";
+import {
+  authService,
+  type User,
+} from "@/services/auth.service";
 
-type AuthContextValue = {
+interface AuthContextValue {
   user: User | null;
-  token: string | null;
   loading: boolean;
-  isAuthenticated: boolean;
+  authenticated: boolean;
 
-  startSession: (
-    response: LoginResponse,
-  ) => void;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<void>;
 
-  logout: () => void;
+  logout: () => Promise<void>;
 
   refreshUser: () => Promise<void>;
-};
+}
 
 const AuthContext =
-  createContext<AuthContextValue | undefined>(
-    undefined,
+  createContext<AuthContextValue | null>(
+    null
   );
-
-type AuthProviderProps = {
-  children: ReactNode;
-};
 
 export function AuthProvider({
   children,
-}: AuthProviderProps) {
+}: {
+  children: ReactNode;
+}) {
   const [user, setUser] =
     useState<User | null>(null);
-
-  const [token, setToken] =
-    useState<string | null>(null);
 
   const [loading, setLoading] =
     useState(true);
 
-  function clearSession() {
-    localStorage.removeItem(
-      "accessToken",
-    );
-
-    localStorage.removeItem("user");
-
-    setToken(null);
-    setUser(null);
-  }
-
-  async function refreshUser() {
-    try {
-      const profile =
-        await getProfile();
-
-      setUser(profile);
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(profile),
-      );
-    } catch {
-      clearSession();
-    }
-  }
-
-  useEffect(() => {
-    async function restoreSession() {
-      const savedToken =
-        localStorage.getItem(
-          "accessToken",
-        );
-
-      if (!savedToken) {
-        setLoading(false);
-        return;
-      }
-
-      setToken(savedToken);
-
+  /*
+   * Consulta al backend para saber
+   * si existe una sesión válida.
+   *
+   * El navegador envía automáticamente
+   * las cookies HttpOnly.
+   */
+  const refreshUser =
+    useCallback(async (): Promise<void> => {
       try {
-        const profile =
-          await getProfile();
+        const currentUser =
+          await authService.me();
 
-        setUser(profile);
-
-        localStorage.setItem(
-          "user",
-          JSON.stringify(profile),
-        );
+        setUser(currentUser);
       } catch {
-        clearSession();
+        setUser(null);
+      }
+    }, []);
+
+  /*
+   * Al cargar la aplicación comprobamos
+   * si el usuario ya tiene una sesión.
+   */
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        await refreshUser();
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    void restoreSession();
-  }, []);
+    void loadSession();
+  }, [refreshUser]);
 
-  function startSession(
-    response: LoginResponse,
-  ) {
-    localStorage.setItem(
-      "accessToken",
-      response.accessToken,
-    );
+  /*
+   * Login.
+   *
+   * El backend crea las cookies:
+   * - access_token
+   * - refresh_token
+   *
+   * Después consultamos /auth/profile
+   * para cargar al usuario en el contexto.
+   */
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<void> => {
+    await authService.login({
+      email,
+      password,
+    });
 
-    localStorage.setItem(
-      "user",
-      JSON.stringify(response.user),
-    );
+    const currentUser =
+      await authService.me();
 
-    setToken(response.accessToken);
-    setUser(response.user);
-  }
+    setUser(currentUser);
+  };
 
-  function logout() {
-    clearSession();
-  }
-
-  const value =
-    useMemo<AuthContextValue>(
-      () => ({
-        user,
-        token,
-        loading,
-        isAuthenticated:
-          !!token && !!user,
-
-        startSession,
-        logout,
-        refreshUser,
-      }),
-      [user, token, loading],
-    );
+  /*
+   * Logout.
+   *
+   * El backend:
+   * - elimina la sesión de MongoDB
+   * - elimina las cookies
+   *
+   * El frontend elimina al usuario
+   * del estado.
+   */
+  const logout =
+    async (): Promise<void> => {
+      try {
+        await authService.logout();
+      } finally {
+        setUser(null);
+      }
+    };
 
   return (
     <AuthContext.Provider
-      value={value}
+      value={{
+        user,
+        loading,
+        authenticated: Boolean(user),
+        login,
+        logout,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>
@@ -165,7 +147,7 @@ export function useAuth() {
 
   if (!context) {
     throw new Error(
-      "useAuth debe utilizarse dentro de AuthProvider",
+      "useAuth debe utilizarse dentro de AuthProvider"
     );
   }
 

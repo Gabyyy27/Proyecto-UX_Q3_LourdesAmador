@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import api from "./api";
 
 export type HabitRecord = {
   _id: string;
@@ -16,26 +16,24 @@ type CompleteHabitResponse = {
   record: HabitRecord;
 };
 
-export function completeHabit(
+export async function completeHabit(
   habitId: string,
 ): Promise<CompleteHabitResponse> {
-  return apiFetch<CompleteHabitResponse>(
-    `/habits/${habitId}/complete`,
-    {
-      method: "POST",
-      authenticated: true,
-    },
-  );
+  const response =
+    await api.post<CompleteHabitResponse>(
+      `/habits/${habitId}/complete`,
+    );
+
+  return response.data;
 }
 
-export function getHabitHistory(
+export async function getHabitHistory(
   habitId: string,
 ): Promise<HabitRecord[]> {
-  return apiFetch<HabitRecord[]>(
-    `/habits/${habitId}/history`,
-    {
-      method: "GET",
-      authenticated: true,
-    },
-  );
+  const response =
+    await api.get<HabitRecord[]>(
+      `/habits/${habitId}/history`,
+    );
+
+  return response.data;
 }

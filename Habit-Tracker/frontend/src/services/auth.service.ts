@@ -1,43 +1,54 @@
-import { apiFetch } from "./api";
+import api from "./api";
 
-import type {
-  LoginData,
-  LoginResponse,
-  RegisterData,
-  RegisterResponse,
-  User,
-} from "@/types/auth";
-
-export function login(
-  data: LoginData,
-): Promise<LoginResponse> {
-  return apiFetch<LoginResponse>(
-    "/auth/login",
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    },
-  );
+export interface User {
+  id: number | string;
+  name: string;
+  email: string;
 }
 
-export function register(
-  data: RegisterData,
-): Promise<RegisterResponse> {
-  return apiFetch<RegisterResponse>(
-    "/auth/register",
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    },
-  );
+export interface LoginRequest {
+  email: string;
+  password: string;
 }
 
-export function getProfile(): Promise<User> {
-  return apiFetch<User>(
-    "/auth/profile",
-    {
-      method: "GET",
-      authenticated: true,
-    },
-  );
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
 }
+
+export const authService = {
+  login: async (data: LoginRequest) => {
+    const response = await api.post(
+      "/auth/login",
+      data
+    );
+
+    return response.data;
+  },
+
+  register: async (data: RegisterRequest) => {
+    const response = await api.post(
+      "/auth/register",
+      data
+    );
+
+    return response.data;
+  },
+
+  me: async (): Promise<User> => {
+  const response = await api.get(
+    "/auth/profile"
+  );
+
+  return response.data;
+},
+
+ logout: async (): Promise<void> => {
+  await api.post("/auth/logout");
+},
+
+  refresh: async () => {
+    await api.post("/auth/refresh");
+  },
+};

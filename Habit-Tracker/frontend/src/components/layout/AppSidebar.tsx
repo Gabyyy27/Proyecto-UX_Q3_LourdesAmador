@@ -1,5 +1,7 @@
 "use client";
 
+import LogoutIcon from "@mui/icons-material/Logout";
+
 import {
   Box,
   Drawer,
@@ -12,7 +14,13 @@ import {
 } from "@mui/material";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
+
+import { useAuth } from "@/context/AuthContext";
 
 import { navigationItems } from "./navigation";
 
@@ -29,8 +37,46 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
 
+  const router = useRouter();
+
+  const { logout } = useAuth();
+
+  const handleLogout =
+    async () => {
+      /*
+       * Cerramos primero el Drawer
+       * en caso de estar en móvil.
+       */
+      onClose();
+
+      /*
+       * El AuthContext llama:
+       *
+       * POST /auth/logout
+       *
+       * El backend:
+       * - elimina la sesión
+       * - elimina las cookies
+       *
+       * Y el contexto deja user = null.
+       */
+      await logout();
+
+      /*
+       * Finalmente enviamos al usuario
+       * de regreso al login.
+       */
+      router.replace("/login");
+    };
+
   const content = (
-    <Box>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+      }}
+    >
       <Toolbar
         sx={{
           px: 2,
@@ -77,6 +123,7 @@ export function AppSidebar({
                   "&.Mui-selected": {
                     bgcolor:
                       "rgba(108, 99, 255, 0.12)",
+
                     color:
                       "primary.main",
                   },
@@ -90,6 +137,7 @@ export function AppSidebar({
                 <ListItemIcon
                   sx={{
                     minWidth: 40,
+
                     color: selected
                       ? "primary.main"
                       : "text.secondary",
@@ -99,12 +147,62 @@ export function AppSidebar({
                 </ListItemIcon>
 
                 <ListItemText
-                  primary={item.label}
+                  primary={
+                    item.label
+                  }
                 />
               </ListItemButton>
             );
           },
         )}
+      </List>
+
+      {/*
+       * Empuja el botón de logout
+       * hacia la parte inferior.
+       */}
+      <Box
+        sx={{
+          flexGrow: 1,
+        }}
+      />
+
+      <List
+        sx={{
+          px: 1.5,
+          pb: 2,
+        }}
+      >
+        <ListItemButton
+          onClick={() => {
+            void handleLogout();
+          }}
+          sx={{
+            borderRadius: 2,
+
+            color:
+              "error.main",
+
+            "&:hover": {
+              bgcolor:
+                "action.hover",
+            },
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: 40,
+              color:
+                "error.main",
+            }}
+          >
+            <LogoutIcon />
+          </ListItemIcon>
+
+          <ListItemText
+            primary="Cerrar sesión"
+          />
+        </ListItemButton>
       </List>
     </Box>
   );
@@ -144,13 +242,18 @@ export function AppSidebar({
           },
 
           width: drawerWidth,
+
           flexShrink: 0,
 
           "& .MuiDrawer-paper": {
             width: drawerWidth,
-            boxSizing: "border-box",
+
+            boxSizing:
+              "border-box",
+
             borderRight:
               "1px solid",
+
             borderColor:
               "divider",
           },
