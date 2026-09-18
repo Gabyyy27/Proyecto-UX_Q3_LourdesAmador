@@ -4,7 +4,6 @@ import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 
 import {
-  Alert,
   Box,
   Button,
   Card,
@@ -24,6 +23,10 @@ import {
   useMemo,
   useState,
 } from "react";
+
+import {
+  useSnackbar,
+} from "notistack";
 
 import {
   deleteHabit,
@@ -46,7 +49,13 @@ import { HabitMobileCard } from "@/components/habits/HabitMobileCard";
 
 import { DeleteHabitDialog } from "@/components/habits/DeleteHabitDialog";
 
+import { HabitTrackingDialog } from "@/components/habits/HabitTrackingDialog";
+
 export default function HabitsPage() {
+  const {
+    enqueueSnackbar,
+  } = useSnackbar();
+
   const [
     habits,
     setHabits,
@@ -58,16 +67,6 @@ export default function HabitsPage() {
   ] = useState(true);
 
   const [
-    error,
-    setError,
-  ] = useState("");
-
-  const [
-    success,
-    setSuccess,
-  ] = useState("");
-
-  const [
     search,
     setSearch,
   ] = useState("");
@@ -76,14 +75,21 @@ export default function HabitsPage() {
     filter,
     setFilter,
   ] = useState<HabitFilter>(
-    "all",
+    "all"
   );
 
   const [
     habitToDelete,
     setHabitToDelete,
   ] = useState<Habit | null>(
-    null,
+    null
+  );
+
+  const [
+    habitToTrack,
+    setHabitToTrack,
+  ] = useState<Habit | null>(
+    null
   );
 
   const [
@@ -95,22 +101,24 @@ export default function HabitsPage() {
     useCallback(async () => {
       try {
         setLoading(true);
-        setError("");
 
         const data =
           await getHabits();
 
         setHabits(data);
       } catch (loadError) {
-        setError(
+        enqueueSnackbar(
           loadError instanceof Error
             ? loadError.message
             : "No se pudieron cargar los hábitos",
+          {
+            variant: "error",
+          }
         );
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [enqueueSnackbar]);
 
   useEffect(() => {
     void loadHabits();
@@ -130,12 +138,12 @@ export default function HabitsPage() {
             habit.name
               .toLowerCase()
               .includes(
-                normalizedSearch,
+                normalizedSearch
               ) ||
             habit.category
               .toLowerCase()
               .includes(
-                normalizedSearch,
+                normalizedSearch
               );
 
           const matchesFilter =
@@ -150,7 +158,7 @@ export default function HabitsPage() {
             matchesSearch &&
             matchesFilter
           );
-        },
+        }
       );
     }, [
       habits,
@@ -159,14 +167,12 @@ export default function HabitsPage() {
     ]);
 
   async function handleToggle(
-    habitId: string,
+    habitId: string
   ) {
     try {
-      setError("");
-
       const updated =
         await toggleHabit(
-          habitId,
+          habitId
         );
 
       setHabits(
@@ -176,14 +182,42 @@ export default function HabitsPage() {
               habit._id ===
               updated._id
                 ? updated
-                : habit,
-          ),
+                : habit
+          )
+      );
+
+      /*
+       * Si el usuario desactiva un
+       * hábito que tenía abierto en
+       * seguimiento, cerramos también
+       * el diálogo.
+       */
+      if (
+        !updated.active &&
+        habitToTrack?._id ===
+          updated._id
+      ) {
+        setHabitToTrack(
+          null
+        );
+      }
+
+      enqueueSnackbar(
+        updated.active
+          ? "Hábito activado correctamente."
+          : "Hábito desactivado correctamente.",
+        {
+          variant: "success",
+        }
       );
     } catch (toggleError) {
-      setError(
+      enqueueSnackbar(
         toggleError instanceof Error
           ? toggleError.message
-          : "No se pudo cambiar el estado",
+          : "No se pudo cambiar el estado del hábito",
+        {
+          variant: "error",
+        }
       );
     }
   }
@@ -195,10 +229,9 @@ export default function HabitsPage() {
 
     try {
       setDeleting(true);
-      setError("");
 
       await deleteHabit(
-        habitToDelete._id,
+        habitToDelete._id
       );
 
       setHabits(
@@ -206,20 +239,40 @@ export default function HabitsPage() {
           current.filter(
             (habit) =>
               habit._id !==
-              habitToDelete._id,
-          ),
+              habitToDelete._id
+          )
       );
 
-      setSuccess(
+      /*
+       * Por seguridad, si el mismo
+       * hábito estuviera seleccionado
+       * para seguimiento, lo limpiamos.
+       */
+      if (
+        habitToTrack?._id ===
+        habitToDelete._id
+      ) {
+        setHabitToTrack(
+          null
+        );
+      }
+
+      enqueueSnackbar(
         "Hábito eliminado correctamente.",
+        {
+          variant: "success",
+        }
       );
 
       setHabitToDelete(null);
     } catch (deleteError) {
-      setError(
+      enqueueSnackbar(
         deleteError instanceof Error
           ? deleteError.message
           : "No se pudo eliminar el hábito",
+        {
+          variant: "error",
+        }
       );
     } finally {
       setDeleting(false);
@@ -237,6 +290,7 @@ export default function HabitsPage() {
         sx={{
           justifyContent:
             "space-between",
+
           alignItems: {
             xs: "stretch",
             sm: "center",
@@ -253,33 +307,13 @@ export default function HabitsPage() {
         <Button
           component={Link}
           href="/habits/new"
-          startIcon={<AddIcon />}
+          startIcon={
+            <AddIcon />
+          }
         >
           Crear hábito
         </Button>
       </Stack>
-
-      {error ? (
-        <Alert
-          severity="error"
-          onClose={() =>
-            setError("")
-          }
-        >
-          {error}
-        </Alert>
-      ) : null}
-
-      {success ? (
-        <Alert
-          severity="success"
-          onClose={() =>
-            setSuccess("")
-          }
-        >
-          {success}
-        </Alert>
-      ) : null}
 
       <Stack spacing={2}>
         <TextField
@@ -287,7 +321,7 @@ export default function HabitsPage() {
           value={search}
           onChange={(event) =>
             setSearch(
-              event.target.value,
+              event.target.value
             )
           }
           sx={{
@@ -372,6 +406,9 @@ export default function HabitsPage() {
                 onDelete={
                   setHabitToDelete
                 }
+                onTrack={
+                  setHabitToTrack
+                }
               />
 
               <Stack
@@ -390,15 +427,20 @@ export default function HabitsPage() {
                       key={
                         habit._id
                       }
-                      habit={habit}
+                      habit={
+                        habit
+                      }
                       onToggle={
                         handleToggle
                       }
                       onDelete={
                         setHabitToDelete
                       }
+                      onTrack={
+                        setHabitToTrack
+                      }
                     />
-                  ),
+                  )
                 )}
               </Stack>
             </>
@@ -406,12 +448,25 @@ export default function HabitsPage() {
         </CardContent>
       </Card>
 
+      <HabitTrackingDialog
+        habit={habitToTrack}
+        open={
+          habitToTrack !==
+          null
+        }
+        onClose={() =>
+          setHabitToTrack(
+            null
+          )
+        }
+      />
+
       <DeleteHabitDialog
         habit={habitToDelete}
         loading={deleting}
         onClose={() =>
           setHabitToDelete(
-            null,
+            null
           )
         }
         onConfirm={() =>

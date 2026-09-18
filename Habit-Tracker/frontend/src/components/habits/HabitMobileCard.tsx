@@ -2,6 +2,7 @@
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 
 import {
   Card,
@@ -36,6 +37,15 @@ type HabitMobileCardProps = {
   onDelete: (
     habit: Habit
   ) => void;
+
+  /*
+   * Se conectará desde HabitsPage
+   * cuando creemos el diálogo
+   * reutilizable de seguimiento.
+   */
+  onTrack?: (
+    habit: Habit
+  ) => void;
 };
 
 function getTrackingLabel(
@@ -67,6 +77,7 @@ export function HabitMobileCard({
   habit,
   onToggle,
   onDelete,
+  onTrack,
 }: HabitMobileCardProps) {
   return (
     <Card
@@ -118,7 +129,9 @@ export function HabitMobileCard({
                   variant="body2"
                   color="text.secondary"
                 >
-                  {habit.description}
+                  {
+                    habit.description
+                  }
                 </Typography>
               ) : null}
             </Stack>
@@ -215,9 +228,11 @@ export function HabitMobileCard({
               </Typography>
 
               <Chip
-                label={getPriorityLabel(
-                  habit.priority
-                )}
+                label={
+                  getPriorityLabel(
+                    habit.priority
+                  )
+                }
                 size="small"
                 variant="outlined"
               />
@@ -234,12 +249,44 @@ export function HabitMobileCard({
                 "flex-end",
             }}
           >
+            {onTrack ? (
+              <Tooltip
+                title={
+                  habit.active
+                    ? "Registrar seguimiento"
+                    : "Activa el hábito para registrar seguimiento"
+                }
+                arrow
+              >
+                <span>
+                  <IconButton
+                    color="primary"
+                    disabled={
+                      !habit.active
+                    }
+                    aria-label={
+                      `Registrar seguimiento de ${habit.name}`
+                    }
+                    onClick={() =>
+                      onTrack(
+                        habit
+                      )
+                    }
+                  >
+                    <TrackChangesIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : null}
+
             <Tooltip
               title="Editar hábito"
               arrow
             >
               <IconButton
-                component={Link}
+                component={
+                  Link
+                }
                 href={
                   `/habits/${habit._id}/edit`
                 }

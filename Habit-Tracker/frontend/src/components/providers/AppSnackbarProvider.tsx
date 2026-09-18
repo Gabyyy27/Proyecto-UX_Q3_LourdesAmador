@@ -21,7 +21,7 @@ export function AppSnackbarProvider({
       autoHideDuration={3500}
       preventDuplicate
       anchorOrigin={{
-        vertical: "bottom",
+        vertical: "top",
         horizontal: "right",
       }}
     >

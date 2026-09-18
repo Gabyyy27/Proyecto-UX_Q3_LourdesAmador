@@ -2,6 +2,7 @@
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 
 import {
   Chip,
@@ -39,6 +40,19 @@ type HabitTableProps = {
   onDelete: (
     habit: Habit
   ) => void;
+
+  /*
+   * Será conectado desde HabitsPage
+   * cuando creemos el diálogo de
+   * seguimiento.
+   *
+   * Lo dejamos opcional para que este
+   * paso compile sin modificar todavía
+   * la página principal.
+   */
+  onTrack?: (
+    habit: Habit
+  ) => void;
 };
 
 function getTrackingLabel(
@@ -70,6 +84,7 @@ export function HabitTable({
   habits,
   onToggle,
   onDelete,
+  onTrack,
 }: HabitTableProps) {
   return (
     <TableContainer
@@ -218,14 +233,45 @@ export function HabitTable({
                         "flex-end",
                     }}
                   >
+                    {onTrack ? (
+                      <Tooltip
+                        title={
+                          habit.active
+                            ? "Registrar seguimiento"
+                            : "Activa el hábito para registrar seguimiento"
+                        }
+                        arrow
+                      >
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            disabled={
+                              !habit.active
+                            }
+                            aria-label={
+                              `Registrar seguimiento de ${habit.name}`
+                            }
+                            onClick={() =>
+                              onTrack(
+                                habit
+                              )
+                            }
+                          >
+                            <TrackChangesIcon
+                              fontSize="small"
+                            />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    ) : null}
+
                     <Tooltip
                       title="Editar hábito"
                       arrow
                     >
                       <IconButton
-                        component={
-                          Link
-                        }
+                        component={Link}
                         href={
                           `/habits/${habit._id}/edit`
                         }
