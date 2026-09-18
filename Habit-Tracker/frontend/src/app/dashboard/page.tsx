@@ -1,16 +1,16 @@
 "use client";
 
 import {
-  Alert,
+
   Box,
-  Button,
+
   Card,
   CardContent,
   Chip,
   CircularProgress,
   LinearProgress,
   Stack,
-  TextField,
+
   Typography,
 } from "@mui/material";
 
@@ -20,13 +20,13 @@ import {
   useState,
 } from "react";
 
+import {
+  useSnackbar,
+} from "notistack";
+
 import { StatCard } from "@/components/dashboard/StatCard";
 
-import {
-  addHabitProgress,
-  completeHabit,
-  getHabitHistory,
-} from "@/services/habit-records.service";
+import { getHabitHistory } from "@/services/habit-records.service";
 
 import {
   getHabits,
@@ -148,8 +148,8 @@ function getIsoWeek(
 
   workingDate.setUTCDate(
     workingDate.getUTCDate() +
-      4 -
-      weekday
+    4 -
+    weekday
   );
 
   const isoYear =
@@ -171,7 +171,7 @@ function getIsoWeek(
           workingDate.getTime() -
           yearStart.getTime()
         ) /
-          86400000 +
+        86400000 +
         1
       ) / 7
     );
@@ -286,10 +286,10 @@ function isHabitAvailableToday(
   if (
     habit.endDate &&
     today >
-      habit.endDate.slice(
-        0,
-        10
-      )
+    habit.endDate.slice(
+      0,
+      10
+    )
   ) {
     return false;
   }
@@ -333,42 +333,51 @@ function getProgressPercent(
   );
 }
 
+function getFrequencyLabel(
+  frequency: HabitFrequency
+) {
+  switch (frequency) {
+    case "daily":
+      return "Diario";
+
+    case "weekly":
+      return "Semanal";
+
+    case "monthly":
+      return "Mensual";
+
+    case "custom":
+      return "Personalizada";
+
+    default:
+      return frequency;
+  }
+}
+
 export default function DashboardPage() {
-  const [data, setData] =
+  const {
+    enqueueSnackbar,
+  } = useSnackbar();
+
+  const [
+    data,
+    setData,
+  ] =
     useState<DashboardData | null>(
       null
     );
 
-  const [loading, setLoading] =
+  const [
+    loading,
+    setLoading,
+  ] =
     useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [success, setSuccess] =
-    useState("");
-
-  const [
-    savingId,
-    setSavingId,
-  ] =
-    useState<string | null>(
-      null
-    );
-
-  const [
-    progressAmounts,
-    setProgressAmounts,
-  ] =
-    useState<
-      Record<string, string>
-    >({});
 
   const loadDashboard =
     useCallback(async () => {
       try {
         setLoading(true);
-        setError("");
+
 
         const habits =
           await getHabits();
@@ -415,20 +424,42 @@ export default function DashboardPage() {
                   );
 
                 /*
-                 * También aceptamos el
-                 * dateKey antiguo para
-                 * mantener compatibilidad
-                 * con registros previos a
-                 * la migración.
+                 * Primero buscamos el
+                 * registro con la nueva
+                 * clave de período.
                  */
-                const currentRecord =
+                let currentRecord =
                   history.find(
                     (record) =>
                       record.dateKey ===
-                        periodKey ||
-                      record.dateKey ===
-                        today
+                      periodKey
                   );
+
+                /*
+                 * Compatibilidad con los
+                 * registros antiguos.
+                 *
+                 * Solo aplicamos el
+                 * dateKey YYYY-MM-DD a
+                 * frecuencias que realmente
+                 * trabajan por día.
+                 */
+                if (
+                  !currentRecord &&
+                  (
+                    habit.frequency ===
+                    "daily" ||
+                    habit.frequency ===
+                    "custom"
+                  )
+                ) {
+                  currentRecord =
+                    history.find(
+                      (record) =>
+                        record.dateKey ===
+                        today
+                    );
+                }
 
                 const trackingType =
                   habit.trackingType ??
@@ -439,10 +470,10 @@ export default function DashboardPage() {
                     ?.targetValue ??
                   (
                     trackingType ===
-                    "binary"
+                      "binary"
                       ? 1
                       : habit.targetValue ??
-                        1
+                      1
                   );
 
                 const currentValue =
@@ -464,24 +495,36 @@ export default function DashboardPage() {
                   periodCompleted
                     ? 100
                     : getProgressPercent(
-                        currentValue,
-                        targetValue
-                      );
+                      currentValue,
+                      targetValue
+                    );
 
                 const completedAt =
                   currentRecord
                     ?.completedAt;
 
+                /*
+                 * "Completados hoy" cuenta
+                 * solamente los hábitos que
+                 * efectivamente fueron
+                 * completados hoy.
+                 *
+                 * Un hábito semanal que se
+                 * completó ayer sigue
+                 * completado esta semana,
+                 * pero no cuenta como
+                 * completado hoy.
+                 */
                 const completedToday =
                   Boolean(
                     periodCompleted &&
-                      completedAt &&
-                      getDateKey(
-                        new Date(
-                          completedAt
-                        ),
-                        DASHBOARD_TIMEZONE
-                      ) === today
+                    completedAt &&
+                    getDateKey(
+                      new Date(
+                        completedAt
+                      ),
+                      DASHBOARD_TIMEZONE
+                    ) === today
                   );
 
                 return {
@@ -516,23 +559,23 @@ export default function DashboardPage() {
 
         const dailyProgress =
           habitsWithStatus.length ===
-          0
+            0
             ? 0
             : Math.round(
-                habitsWithStatus.reduce(
+              habitsWithStatus.reduce(
+                (
+                  total,
+                  habit
+                ) =>
+                  total +
                   (
-                    total,
-                    habit
-                  ) =>
-                    total +
-                    (
-                      habit.progressPercent ??
-                      0
-                    ),
-                  0
-                ) /
-                  habitsWithStatus.length
-              );
+                    habit.progressPercent ??
+                    0
+                  ),
+                0
+              ) /
+              habitsWithStatus.length
+            );
 
         setData({
           activeHabits:
@@ -546,127 +589,23 @@ export default function DashboardPage() {
             habitsWithStatus,
         });
       } catch (loadError) {
-        setError(
+        enqueueSnackbar(
           loadError instanceof Error
             ? loadError.message
-            : "No se pudo cargar el dashboard"
+            : "No se pudo cargar el dashboard",
+          {
+            variant: "error",
+          }
         );
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [enqueueSnackbar]);
 
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
 
-  function handleProgressAmountChange(
-    habitId: string,
-    value: string
-  ) {
-    setProgressAmounts(
-      (current) => ({
-        ...current,
-        [habitId]: value,
-      })
-    );
-  }
-
-  async function handleComplete(
-    habitId: string
-  ) {
-    try {
-      setSavingId(
-        habitId
-      );
-
-      setError("");
-      setSuccess("");
-
-      await completeHabit(
-        habitId
-      );
-
-      setSuccess(
-        "Hábito marcado como completado."
-      );
-
-      await loadDashboard();
-    } catch (completeError) {
-      setError(
-        completeError instanceof Error
-          ? completeError.message
-          : "No se pudo completar el hábito"
-      );
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function handleAddProgress(
-    habitId: string
-  ) {
-    const rawAmount =
-      progressAmounts[
-        habitId
-      ] ?? "";
-
-    const amount =
-      Number(
-        rawAmount
-      );
-
-    if (
-      rawAmount.trim() ===
-        "" ||
-      !Number.isFinite(
-        amount
-      ) ||
-      amount <= 0
-    ) {
-      setError(
-        "Ingresa una cantidad mayor que 0."
-      );
-
-      return;
-    }
-
-    try {
-      setSavingId(
-        habitId
-      );
-
-      setError("");
-      setSuccess("");
-
-      const response =
-        await addHabitProgress(
-          habitId,
-          amount
-        );
-
-      setProgressAmounts(
-        (current) => ({
-          ...current,
-          [habitId]: "",
-        })
-      );
-
-      setSuccess(
-        response.message
-      );
-
-      await loadDashboard();
-    } catch (progressError) {
-      setError(
-        progressError instanceof Error
-          ? progressError.message
-          : "No se pudo registrar el progreso"
-      );
-    } finally {
-      setSavingId(null);
-    }
-  }
 
   if (
     loading &&
@@ -690,38 +629,38 @@ export default function DashboardPage() {
 
   return (
     <Stack spacing={3}>
-      {error ? (
-        <Alert
-          severity="error"
-          onClose={() =>
-            setError("")
-          }
+      <Box>
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{
+            fontWeight: 700,
+          }}
         >
-          {error}
-        </Alert>
-      ) : null}
+          Dashboard
+        </Typography>
 
-      {success ? (
-        <Alert
-          severity="success"
-          onClose={() =>
-            setSuccess("")
-          }
+        <Typography
+          color="text.secondary"
+          sx={{
+            mt: 0.5,
+          }}
         >
-          {success}
-        </Alert>
-      ) : null}
+          Resumen de tu actividad y
+          progreso actual.
+        </Typography>
+      </Box>
 
       <Box
         sx={{
           display: "grid",
 
           gridTemplateColumns:
-            {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              lg: "repeat(3, 1fr)",
-            },
+          {
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            lg: "repeat(3, 1fr)",
+          },
 
           gap: 2,
         }}
@@ -743,11 +682,10 @@ export default function DashboardPage() {
         />
 
         <StatCard
-          label="Progreso actual"
-          value={`${
-            data?.dailyProgress ??
+          label="Cumplimiento actual"
+          value={`${data?.dailyProgress ??
             0
-          }%`}
+            }%`}
         />
       </Box>
 
@@ -761,11 +699,25 @@ export default function DashboardPage() {
               sx={{
                 justifyContent:
                   "space-between",
+                alignItems:
+                  "center",
               }}
             >
-              <Typography>
-                Progreso general
-              </Typography>
+              <Box>
+                <Typography
+                  variant="h6"
+                >
+                  Cumplimiento actual
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  Promedio del progreso
+                  de los hábitos.
+                </Typography>
+              </Box>
 
               <Typography
                 sx={{
@@ -798,11 +750,22 @@ export default function DashboardPage() {
       >
         <CardContent>
           <Stack spacing={2}>
-            <Typography
-              variant="h6"
-            >
-              Hábitos de hoy
-            </Typography>
+            <Box>
+              <Typography
+                variant="h6"
+              >
+                Resumen de hábitos
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                El seguimiento se
+                registra desde la
+                sección Hábitos.
+              </Typography>
+            </Box>
 
             {data?.todayHabits
               .length === 0 ? (
@@ -817,127 +780,94 @@ export default function DashboardPage() {
                   color="text.secondary"
                 >
                   No tienes hábitos
-                  programados para hoy.
+                  programados para este
+                  momento.
                 </Typography>
               </Box>
             ) : (
-              data?.todayHabits.map(
-                (habit) => {
-                  const isSaving =
-                    savingId ===
-                    habit._id;
+              <Stack
+                spacing={0}
+              >
+                {data?.todayHabits.map(
+                  (habit) => {
+                    const completed =
+                      habit.periodCompleted ??
+                      false;
 
-                  const completed =
-                    habit.periodCompleted ??
-                    false;
-
-                  const currentValue =
-                    habit.currentValue ??
-                    0;
-
-                  const targetValue =
-                    habit.periodTargetValue ??
-                    habit.targetValue ??
-                    1;
-
-                  const unit =
-                    habit.periodUnit ??
-                    habit.unit ??
-                    "";
-
-                  const progressPercent =
-                    habit.progressPercent ??
-                    0;
-
-                  const amountValue =
-                    progressAmounts[
-                      habit._id
-                    ] ?? "";
-
-                  const parsedAmount =
-                    Number(
-                      amountValue
-                    );
-
-                  const validAmount =
-                    amountValue.trim() !==
-                      "" &&
-                    Number.isFinite(
-                      parsedAmount
-                    ) &&
-                    parsedAmount >
+                    const currentValue =
+                      habit.currentValue ??
                       0;
 
-                  return (
-                    <Box
-                      key={
-                        habit._id
-                      }
-                      sx={{
-                        py: 2,
+                    const targetValue =
+                      habit.periodTargetValue ??
+                      habit.targetValue ??
+                      1;
 
-                        borderBottom:
-                          "1px solid",
+                    const unit =
+                      habit.periodUnit ??
+                      habit.unit ??
+                      "";
 
-                        borderColor:
-                          "divider",
+                    const progressPercent =
+                      habit.progressPercent ??
+                      0;
 
-                        "&:last-child":
+                    return (
+                      <Box
+                        key={
+                          habit._id
+                        }
+                        sx={{
+                          py: 2,
+
+                          borderBottom:
+                            "1px solid",
+
+                          borderColor:
+                            "divider",
+
+                          "&:last-child":
                           {
                             borderBottom:
                               "none",
                           },
-                      }}
-                    >
-                      <Stack
-                        spacing={2}
+                        }}
                       >
                         <Stack
-                          direction={{
-                            xs: "column",
-                            sm: "row",
-                          }}
+                          direction="row"
                           spacing={1.5}
                           sx={{
+                            width: "100%",
                             justifyContent:
                               "space-between",
-
-                            alignItems: {
-                              xs:
-                                "stretch",
-                              sm:
-                                "center",
-                            },
+                            alignItems:
+                              "flex-start",
                           }}
                         >
                           <Stack
-                            spacing={0.5}
+                            spacing={0.25}
+                            sx={{
+                              flex: 1,
+                              minWidth: 0,
+                            }}
                           >
                             <Typography
                               sx={{
-                                fontWeight:
-                                  600,
+                                fontWeight: 600,
+                                wordBreak:
+                                  "break-word",
                               }}
                             >
-                              {
-                                habit.name
-                              }
+                              {habit.name}
                             </Typography>
 
                             <Typography
                               variant="body2"
                               color="text.secondary"
                             >
-                              {habit.trackingType ===
-                              "quantity"
-                                ? `${currentValue} / ${targetValue}${
-                                    unit
-                                      ? ` ${unit}`
-                                      : ""
-                                  }`
-                                : completed
-                                  ? "Completado en el período actual"
-                                  : "Pendiente en el período actual"}
+                              {getFrequencyLabel(
+                                habit.frequency
+                              )}
                             </Typography>
                           </Stack>
 
@@ -954,165 +884,78 @@ export default function DashboardPage() {
                             }
                             size="small"
                             variant="outlined"
+                            sx={{
+                              flexShrink: 0,
+                              ml: 1,
+                            }}
                           />
                         </Stack>
 
                         {habit.trackingType ===
-                        "quantity" ? (
-                          <>
+                          "quantity" ? (
+                          <Stack
+                            spacing={0.75}
+                          >
                             <Stack
-                              spacing={0.75}
+                              direction="row"
+                              sx={{
+                                justifyContent:
+                                  "space-between",
+                              }}
                             >
-                              <Stack
-                                direction="row"
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                {currentValue}{" "}
+                                /{" "}
+                                {targetValue}
+                                {unit
+                                  ? ` ${unit}`
+                                  : ""}
+                              </Typography>
+
+                              <Typography
+                                variant="body2"
                                 sx={{
-                                  justifyContent:
-                                    "space-between",
+                                  fontWeight:
+                                    600,
                                 }}
                               >
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Progreso
-                                </Typography>
-
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontWeight:
-                                      600,
-                                  }}
-                                >
-                                  {
-                                    progressPercent
-                                  }
-                                  %
-                                </Typography>
-                              </Stack>
-
-                              <LinearProgress
-                                variant="determinate"
-                                value={
+                                {
                                   progressPercent
                                 }
-                                sx={{
-                                  height: 8,
-                                  borderRadius:
-                                    999,
-                                }}
-                              />
+                                %
+                              </Typography>
                             </Stack>
 
-                            <Stack
-                              direction={{
-                                xs: "column",
-                                sm: "row",
-                              }}
-                              spacing={1.5}
+                            <LinearProgress
+                              variant="determinate"
+                              value={
+                                progressPercent
+                              }
                               sx={{
-                                alignItems: {
-                                  xs:
-                                    "stretch",
-                                  sm:
-                                    "flex-start",
-                                },
+                                height: 6,
+                                borderRadius:
+                                  999,
                               }}
-                            >
-                              <TextField
-                                label={
-                                  unit
-                                    ? `Cantidad (${unit})`
-                                    : "Cantidad"
-                                }
-                                type="number"
-                                size="small"
-                                value={
-                                  amountValue
-                                }
-                                onChange={(
-                                  event
-                                ) =>
-                                  handleProgressAmountChange(
-                                    habit._id,
-                                    event
-                                      .target
-                                      .value
-                                  )
-                                }
-                                disabled={
-                                  completed ||
-                                  isSaving
-                                }
-                                slotProps={{
-                                  htmlInput:
-                                    {
-                                      min: 0,
-                                      step:
-                                        "any",
-                                    },
-                                }}
-                                sx={{
-                                  width: {
-                                    xs:
-                                      "100%",
-                                    sm: 180,
-                                  },
-                                }}
-                              />
-
-                              <Button
-                                onClick={() =>
-                                  void handleAddProgress(
-                                    habit._id
-                                  )
-                                }
-                                disabled={
-                                  completed ||
-                                  isSaving ||
-                                  !validAmount
-                                }
-                              >
-                                {isSaving
-                                  ? "Guardando..."
-                                  : completed
-                                    ? "Objetivo completado"
-                                    : "Agregar progreso"}
-                              </Button>
-                            </Stack>
-                          </>
-                        ) : (
-                          <Stack
-                            direction="row"
-                            sx={{
-                              justifyContent:
-                                "flex-end",
-                            }}
-                          >
-                            <Button
-                              disabled={
-                                completed ||
-                                isSaving
-                              }
-                              onClick={() =>
-                                void handleComplete(
-                                  habit._id
-                                )
-                              }
-                            >
-                              {isSaving
-                                ? "Guardando..."
-                                : completed
-                                  ? "Hecho"
-                                  : "Marcar completado"}
-                            </Button>
+                            />
                           </Stack>
+                                               ) : (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            {completed
+                              ? "Objetivo cumplido en el período actual."
+                              : "Aún no se ha completado en el período actual."}
+                          </Typography>
                         )}
-                      </Stack>
-                    </Box>
-                  );
-                }
-              )
+                      </Box>
+                    );
+                  }
+                )}
+              </Stack>
             )}
           </Stack>
         </CardContent>
