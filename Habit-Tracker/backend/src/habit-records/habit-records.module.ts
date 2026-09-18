@@ -9,6 +9,11 @@ import {
   HabitRecordSchema,
 } from './schemas/habit-record.schema.js';
 
+import {
+  HabitProgressEntry,
+  HabitProgressEntrySchema,
+} from './schemas/habit-progress-entry.schema.js';
+
 import { HabitRecordsController } from './habit-records.controller.js';
 import { HabitRecordsService } from './habit-records.service.js';
 
@@ -18,6 +23,10 @@ import { HabitRecordsService } from './habit-records.service.js';
       {
         name: HabitRecord.name,
         schema: HabitRecordSchema,
+      },
+      {
+        name: HabitProgressEntry.name,
+        schema: HabitProgressEntrySchema,
       },
     ]),
 

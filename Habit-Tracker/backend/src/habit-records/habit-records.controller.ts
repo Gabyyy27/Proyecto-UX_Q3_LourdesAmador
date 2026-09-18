@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -11,7 +12,13 @@ import type { Request } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 
-import { HabitRecordsService } from './habit-records.service.js';
+import {
+  AddProgressDto,
+} from './dto/add-progress.dto.js';
+
+import {
+  HabitRecordsService,
+} from './habit-records.service.js';
 
 type AuthenticatedUser = {
   id: string;
@@ -33,6 +40,12 @@ export class HabitRecordsController {
       HabitRecordsService,
   ) {}
 
+  /*
+   * Completa hábitos binarios.
+   *
+   * Ejemplo:
+   * Tender la cama.
+   */
   @Post(':habitId/complete')
   completeHabit(
     @Param('habitId')
@@ -49,6 +62,38 @@ export class HabitRecordsController {
       );
   }
 
+  /*
+   * Registra progreso para hábitos
+   * cuantificables.
+   *
+   * Ejemplo:
+   * +200 ml de agua.
+   */
+  @Post(':habitId/progress')
+  addProgress(
+    @Param('habitId')
+    habitId: string,
+
+    @Req()
+    request: AuthenticatedRequest,
+
+    @Body()
+    addProgressDto:
+      AddProgressDto,
+  ) {
+    return this.habitRecordsService
+      .addProgress(
+        habitId,
+        request.user.id,
+        request.user.timezone,
+        addProgressDto.amount,
+      );
+  }
+
+  /*
+   * Historial de períodos
+   * del hábito.
+   */
   @Get(':habitId/history')
   getHistory(
     @Param('habitId')
