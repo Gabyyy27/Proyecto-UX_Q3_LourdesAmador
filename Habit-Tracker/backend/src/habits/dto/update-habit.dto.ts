@@ -1,8 +1,12 @@
+import { Type } from 'class-transformer';
+
 import {
   IsArray,
   IsDateString,
   IsEnum,
+  IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
   MaxLength,
   MinLength,
@@ -11,6 +15,7 @@ import {
 import {
   HabitFrequency,
   HabitPriority,
+  HabitTrackingType,
 } from '../habits.constants.js';
 
 export class UpdateHabitDto {
@@ -35,13 +40,33 @@ export class UpdateHabitDto {
   frequency?: HabitFrequency;
 
   @IsArray()
-  @IsString({ each: true })
+  @IsString({
+    each: true,
+  })
   @IsOptional()
   customDays?: string[];
 
   @IsEnum(HabitPriority)
   @IsOptional()
   priority?: HabitPriority;
+
+  @IsEnum(HabitTrackingType)
+  @IsOptional()
+  trackingType?: HabitTrackingType;
+
+  @Type(() => Number)
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
+  @IsPositive()
+  @IsOptional()
+  targetValue?: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(30)
+  unit?: string;
 
   @IsDateString()
   @IsOptional()

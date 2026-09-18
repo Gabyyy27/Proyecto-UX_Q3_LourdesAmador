@@ -3,6 +3,7 @@ import {
   Schema,
   SchemaFactory,
 } from '@nestjs/mongoose';
+
 import {
   HydratedDocument,
   Types,
@@ -11,6 +12,7 @@ import {
 import {
   HabitFrequency,
   HabitPriority,
+  HabitTrackingType,
 } from '../habits.constants.js';
 
 export type HabitDocument =
@@ -57,6 +59,27 @@ export class Habit {
     default: HabitPriority.MEDIUM,
   })
   priority!: HabitPriority;
+
+  @Prop({
+    required: true,
+    enum: HabitTrackingType,
+    default: HabitTrackingType.BINARY,
+  })
+  trackingType!: HabitTrackingType;
+
+  @Prop({
+    type: Number,
+    required: true,
+    default: 1,
+  })
+  targetValue!: number;
+
+  @Prop({
+    type: String,
+    trim: true,
+    default: '',
+  })
+  unit!: string;
 
   @Prop({
     required: true,

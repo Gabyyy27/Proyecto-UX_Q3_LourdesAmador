@@ -4,7 +4,7 @@ import type {
 } from "@/types/habit";
 
 export function getFrequencyLabel(
-  frequency: HabitFrequency,
+  frequency: HabitFrequency
 ) {
   switch (frequency) {
     case "daily":
@@ -13,13 +13,16 @@ export function getFrequencyLabel(
     case "weekly":
       return "Semanal";
 
+    case "monthly":
+      return "Mensual";
+
     case "custom":
       return "Personalizada";
   }
 }
 
 export function getPriorityLabel(
-  priority: HabitPriority,
+  priority: HabitPriority
 ) {
   switch (priority) {
     case "low":
