@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AppRoot } from "@/components/layout/AppRoot";
+import { AppSnackbarProvider } from "@/components/providers/AppSnackbarProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeRegistry } from "@/theme/ThemeRegistry";
 
@@ -24,11 +25,13 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <ThemeRegistry>
-          <AuthProvider>
-            <AppRoot>
-              {children}
-            </AppRoot>
-          </AuthProvider>
+          <AppSnackbarProvider>
+            <AuthProvider>
+              <AppRoot>
+                {children}
+              </AppRoot>
+            </AuthProvider>
+          </AppSnackbarProvider>
         </ThemeRegistry>
       </body>
     </html>
