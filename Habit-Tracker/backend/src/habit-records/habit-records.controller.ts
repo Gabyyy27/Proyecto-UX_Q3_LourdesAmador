@@ -41,6 +41,57 @@ export class HabitRecordsController {
   ) {}
 
   /*
+   * Racha diaria global del usuario.
+   *
+   * {
+   *   hasDailyHabits: true,
+   *   currentStreak: 4,
+   *   bestStreak: 7
+   * }
+   */
+  @Get('streaks/daily')
+  getDailyStreak(
+    @Req()
+    request: AuthenticatedRequest,
+  ) {
+    return this.habitRecordsService
+      .getDailyStreak(
+        request.user.id,
+        request.user.timezone,
+      );
+  }
+
+  /*
+   * Racha semanal global del usuario.
+   *
+   * {
+   *   hasWeeklyHabits: true,
+   *   currentStreak: 3,
+   *   bestStreak: 5
+   * }
+   *
+   * Si nunca ha creado hábitos
+   * semanales:
+   *
+   * {
+   *   hasWeeklyHabits: false,
+   *   currentStreak: 0,
+   *   bestStreak: 0
+   * }
+   */
+  @Get('streaks/weekly')
+  getWeeklyStreak(
+    @Req()
+    request: AuthenticatedRequest,
+  ) {
+    return this.habitRecordsService
+      .getWeeklyStreak(
+        request.user.id,
+        request.user.timezone,
+      );
+  }
+
+  /*
    * Completa hábitos binarios.
    *
    * Ejemplo:

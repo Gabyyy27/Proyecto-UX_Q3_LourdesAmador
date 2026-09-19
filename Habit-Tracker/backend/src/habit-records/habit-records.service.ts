@@ -1051,7 +1051,1156 @@ export class HabitRecordsService {
       entry,
     };
   }
+  /*
+   * RACHA DIARIA
+   *
+   * Calcula:
+   * - racha diaria actual
+   * - mejor racha diaria
+   *
+   * Reglas:
+   *
+   * 1. Solo participan hábitos DAILY.
+   *
+   * 2. Para que un día se considere
+   *    completado, todos los hábitos
+   *    diarios que correspondían a ese
+   *    día deben estar completados.
+   *
+   * 3. Un día sin hábitos aplicables
+   *    no suma racha, pero tampoco la
+   *    rompe.
+   *
+   * 4. El día actual todavía no rompe
+   *    la racha mientras no haya
+   *    terminado.
+   *
+   * 5. Los registros antiguos con
+   *    dateKey YYYY-MM-DD siguen siendo
+   *    compatibles.
+   */
+  async getDailyStreak(
+    userId: string,
+    timezone: string,
+  ) {
+    const safeTimezone =
+      this.validateTimezone(
+        timezone,
+      );
 
+    /*
+     * Obtenemos todos los hábitos
+     * pertenecientes al usuario.
+     */
+    const habits =
+      await this.habitsService
+        .findAll(
+          userId,
+        );
+
+    /*
+     * Saber si existen hábitos diarios
+     * será útil para el frontend.
+     *
+     * Aunque estén inactivos, podemos
+     * distinguir entre:
+     *
+     * - usuario sin hábitos diarios
+     * - usuario con hábitos diarios,
+     *   pero sin una racha activa
+     */
+    const allDailyHabits =
+      habits.filter(
+        (habit) =>
+          habit.frequency ===
+          HabitFrequency.DAILY,
+      );
+
+    if (
+      allDailyHabits.length ===
+      0
+    ) {
+      return {
+        hasDailyHabits: false,
+        currentStreak: 0,
+        bestStreak: 0,
+      };
+    }
+
+    /*
+     * Para la racha actual utilizamos
+     * los hábitos diarios que están
+     * activos actualmente.
+     *
+     * El modelo actual no almacena un
+     * historial de activaciones y
+     * desactivaciones, por lo que no
+     * intentamos inventar períodos de
+     * actividad pasados.
+     */
+    const dailyHabits =
+      allDailyHabits.filter(
+        (habit) =>
+          habit.active,
+      );
+
+    if (
+      dailyHabits.length ===
+      0
+    ) {
+      return {
+        hasDailyHabits: true,
+        currentStreak: 0,
+        bestStreak: 0,
+      };
+    }
+
+    const today =
+      this.getCalendarDate(
+        new Date(),
+        safeTimezone,
+      );
+
+    const todayKey =
+      this.formatCalendarDate(
+        today,
+      );
+
+    /*
+     * Determinamos la fecha más antigua
+     * desde la cual necesitamos evaluar
+     * la racha.
+     */
+    const earliestStart =
+      dailyHabits.reduce(
+        (
+          earliest,
+          habit,
+        ) => {
+          const habitStart =
+            new Date(
+              Date.UTC(
+                habit.startDate
+                  .getUTCFullYear(),
+
+                habit.startDate
+                  .getUTCMonth(),
+
+                habit.startDate
+                  .getUTCDate(),
+              ),
+            );
+
+          if (
+            habitStart.getTime() <
+            earliest.getTime()
+          ) {
+            return habitStart;
+          }
+
+          return earliest;
+        },
+        new Date(
+          Date.UTC(
+            dailyHabits[0]
+              .startDate
+              .getUTCFullYear(),
+
+            dailyHabits[0]
+              .startDate
+              .getUTCMonth(),
+
+            dailyHabits[0]
+              .startDate
+              .getUTCDate(),
+          ),
+        ),
+      );
+
+    /*
+     * Obtenemos únicamente registros
+     * completados de los hábitos diarios
+     * que participan en la racha.
+     */
+    const habitIds =
+      dailyHabits.map(
+        (habit) =>
+          new Types.ObjectId(
+            String(
+              habit._id,
+            ),
+          ),
+      );
+
+    const completedRecords =
+      await this.habitRecordModel
+        .find({
+          userId:
+            new Types.ObjectId(
+              userId,
+            ),
+
+          habitId: {
+            $in:
+              habitIds,
+          },
+
+          completed:
+            true,
+        });
+
+    /*
+     * Mapa:
+     *
+     * YYYY-MM-DD
+     *   -> Set de habitId completados
+     *
+     * Ejemplo:
+     *
+     * 2026-09-18
+     *   -> beberAgua
+     *   -> estudiar
+     */
+    const completedByDate =
+      new Map<
+        string,
+        Set<string>
+      >();
+
+    for (
+      const record of
+      completedRecords
+    ) {
+      let recordDateKey:
+        | string
+        | null = null;
+
+      /*
+       * Formato actual:
+       *
+       * daily:2026-09-18
+       */
+      if (
+        record.dateKey?.startsWith(
+          'daily:',
+        )
+      ) {
+        recordDateKey =
+          record.dateKey.replace(
+            'daily:',
+            '',
+          );
+      } else if (
+        /*
+         * Compatibilidad con registros
+         * antiguos:
+         *
+         * 2026-09-18
+         */
+        /^\d{4}-\d{2}-\d{2}$/.test(
+          record.dateKey ?? '',
+        )
+      ) {
+        recordDateKey =
+          record.dateKey;
+      } else if (
+        record.periodStart
+      ) {
+        /*
+         * Último respaldo en caso de
+         * encontrar un registro antiguo
+         * sin una clave reconocible.
+         */
+        recordDateKey =
+          this.formatCalendarDate(
+            record.periodStart,
+          );
+      }
+
+      if (
+        !recordDateKey
+      ) {
+        continue;
+      }
+
+      const habitId =
+        String(
+          record.habitId,
+        );
+
+      const completedHabits =
+        completedByDate.get(
+          recordDateKey,
+        ) ??
+        new Set<string>();
+
+      completedHabits.add(
+        habitId,
+      );
+
+      completedByDate.set(
+        recordDateKey,
+        completedHabits,
+      );
+    }
+
+    type DayStatus = {
+      dateKey: string;
+
+      hasHabits:
+        boolean;
+
+      completed:
+        boolean;
+    };
+
+    const days:
+      DayStatus[] = [];
+
+    /*
+     * Recorremos cada fecha calendario
+     * desde el hábito diario más antiguo
+     * hasta hoy.
+     */
+    const cursor =
+      new Date(
+        earliestStart.getTime(),
+      );
+
+    while (
+      cursor.getTime() <=
+      today.getTime()
+    ) {
+      const dateKey =
+        this.formatCalendarDate(
+          cursor,
+        );
+
+      /*
+       * Hábitos que correspondían a
+       * esta fecha según startDate y
+       * endDate.
+       */
+      const expectedHabits =
+        dailyHabits.filter(
+          (habit) => {
+            const startDate =
+              habit.startDate
+                .toISOString()
+                .slice(
+                  0,
+                  10,
+                );
+
+            const endDate =
+              habit.endDate
+                ? habit.endDate
+                    .toISOString()
+                    .slice(
+                      0,
+                      10,
+                    )
+                : null;
+
+            if (
+              dateKey <
+              startDate
+            ) {
+              return false;
+            }
+
+            if (
+              endDate &&
+              dateKey >
+                endDate
+            ) {
+              return false;
+            }
+
+            return true;
+          },
+        );
+
+      if (
+        expectedHabits.length ===
+        0
+      ) {
+        days.push({
+          dateKey,
+          hasHabits: false,
+          completed: false,
+        });
+
+        cursor.setUTCDate(
+          cursor.getUTCDate() +
+            1,
+        );
+
+        continue;
+      }
+
+      const completedHabits =
+        completedByDate.get(
+          dateKey,
+        ) ??
+        new Set<string>();
+
+      /*
+       * El día solo está cumplido si
+       * TODOS los hábitos esperados
+       * fueron completados.
+       */
+      const completed =
+        expectedHabits.every(
+          (habit) =>
+            completedHabits.has(
+              String(
+                habit._id,
+              ),
+            ),
+        );
+
+      days.push({
+        dateKey,
+        hasHabits: true,
+        completed,
+      });
+
+      cursor.setUTCDate(
+        cursor.getUTCDate() +
+          1,
+      );
+    }
+
+    /*
+     * MEJOR RACHA
+     *
+     * Los días sin hábitos se ignoran.
+     *
+     * El día actual incompleto tampoco
+     * rompe una racha histórica porque
+     * todavía puede completarse.
+     */
+    let runningStreak =
+      0;
+
+    let bestStreak =
+      0;
+
+    for (
+      const day of days
+    ) {
+      if (
+        !day.hasHabits
+      ) {
+        continue;
+      }
+
+      if (
+        day.completed
+      ) {
+        runningStreak +=
+          1;
+
+        bestStreak =
+          Math.max(
+            bestStreak,
+            runningStreak,
+          );
+
+        continue;
+      }
+
+      /*
+       * Hoy todavía no terminó.
+       */
+      if (
+        day.dateKey ===
+        todayKey
+      ) {
+        continue;
+      }
+
+      runningStreak =
+        0;
+    }
+
+    /*
+     * RACHA ACTUAL
+     *
+     * Recorremos hacia atrás.
+     *
+     * Si hoy todavía está incompleto,
+     * simplemente lo ignoramos.
+     *
+     * El primer día pasado incompleto
+     * sí rompe la racha.
+     */
+    let currentStreak =
+      0;
+
+    for (
+      let index =
+        days.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      const day =
+        days[index];
+
+      if (
+        !day.hasHabits
+      ) {
+        continue;
+      }
+
+      if (
+        day.dateKey ===
+          todayKey &&
+        !day.completed
+      ) {
+        continue;
+      }
+
+      if (
+        day.completed
+      ) {
+        currentStreak +=
+          1;
+
+        continue;
+      }
+
+      break;
+    }
+
+    return {
+      hasDailyHabits: true,
+
+      currentStreak,
+
+      bestStreak,
+    };
+  }
+
+    /*
+   * RACHA SEMANAL
+   *
+   * Calcula:
+   * - racha semanal actual
+   * - mejor racha semanal
+   *
+   * Las semanas utilizan ISO:
+   *
+   * weekly:2026-W38
+   */
+  async getWeeklyStreak(
+    userId: string,
+    timezone: string,
+  ) {
+    const safeTimezone =
+      this.validateTimezone(
+        timezone,
+      );
+
+    const habits =
+      await this.habitsService
+        .findAll(
+          userId,
+        );
+
+    /*
+     * Todos los hábitos semanales
+     * creados por el usuario.
+     *
+     * Esto nos permite saber si la
+     * tarjeta semanal debe existir
+     * en el frontend.
+     */
+    const allWeeklyHabits =
+      habits.filter(
+        (habit) =>
+          habit.frequency ===
+          HabitFrequency.WEEKLY,
+      );
+
+    if (
+      allWeeklyHabits.length ===
+      0
+    ) {
+      return {
+        hasWeeklyHabits: false,
+        currentStreak: 0,
+        bestStreak: 0,
+      };
+    }
+
+    /*
+     * Igual que con la racha diaria,
+     * utilizamos los hábitos que están
+     * activos actualmente.
+     *
+     * No inventamos un historial de
+     * activaciones/desactivaciones que
+     * el modelo todavía no almacena.
+     */
+    const weeklyHabits =
+      allWeeklyHabits.filter(
+        (habit) =>
+          habit.active,
+      );
+
+    if (
+      weeklyHabits.length ===
+      0
+    ) {
+      return {
+        hasWeeklyHabits: true,
+        currentStreak: 0,
+        bestStreak: 0,
+      };
+    }
+
+    /*
+     * Fecha calendario local de hoy.
+     */
+    const today =
+      this.getCalendarDate(
+        new Date(),
+        safeTimezone,
+      );
+
+    /*
+     * Obtiene el lunes correspondiente
+     * a una fecha calendario.
+     */
+    const getWeekStart = (
+      date: Date,
+    ) => {
+      const weekStart =
+        new Date(
+          date.getTime(),
+        );
+
+      const weekday =
+        weekStart.getUTCDay() ||
+        7;
+
+      weekStart.setUTCDate(
+        weekStart.getUTCDate() -
+          weekday +
+          1,
+      );
+
+      return weekStart;
+    };
+
+    const currentWeekStart =
+      getWeekStart(
+        today,
+      );
+
+    const {
+      year:
+        currentWeekYear,
+
+      week:
+        currentWeekNumber,
+    } =
+      this.getIsoWeek(
+        currentWeekStart,
+      );
+
+    const currentWeekKey =
+      `weekly:${currentWeekYear}-W${String(
+        currentWeekNumber,
+      ).padStart(
+        2,
+        '0',
+      )}`;
+
+    /*
+     * Buscamos el hábito semanal
+     * más antiguo.
+     */
+    const earliestStart =
+      weeklyHabits.reduce(
+        (
+          earliest,
+          habit,
+        ) => {
+          const habitStart =
+            new Date(
+              Date.UTC(
+                habit.startDate
+                  .getUTCFullYear(),
+
+                habit.startDate
+                  .getUTCMonth(),
+
+                habit.startDate
+                  .getUTCDate(),
+              ),
+            );
+
+          if (
+            habitStart.getTime() <
+            earliest.getTime()
+          ) {
+            return habitStart;
+          }
+
+          return earliest;
+        },
+        new Date(
+          Date.UTC(
+            weeklyHabits[0]
+              .startDate
+              .getUTCFullYear(),
+
+            weeklyHabits[0]
+              .startDate
+              .getUTCMonth(),
+
+            weeklyHabits[0]
+              .startDate
+              .getUTCDate(),
+          ),
+        ),
+      );
+
+    const earliestWeekStart =
+      getWeekStart(
+        earliestStart,
+      );
+
+    /*
+     * Buscamos únicamente registros
+     * completados de hábitos semanales.
+     */
+    const habitIds =
+      weeklyHabits.map(
+        (habit) =>
+          new Types.ObjectId(
+            String(
+              habit._id,
+            ),
+          ),
+      );
+
+    const completedRecords =
+      await this.habitRecordModel
+        .find({
+          userId:
+            new Types.ObjectId(
+              userId,
+            ),
+
+          habitId: {
+            $in:
+              habitIds,
+          },
+
+          completed:
+            true,
+        });
+
+    /*
+     * Mapa:
+     *
+     * weekly:2026-W38
+     *   -> habitId completados
+     */
+    const completedByWeek =
+      new Map<
+        string,
+        Set<string>
+      >();
+
+    for (
+      const record of
+      completedRecords
+    ) {
+      let recordWeekKey:
+        | string
+        | null = null;
+
+      /*
+       * Formato actual.
+       */
+      if (
+        record.dateKey?.startsWith(
+          'weekly:',
+        )
+      ) {
+        recordWeekKey =
+          record.dateKey;
+      } else {
+        /*
+         * Compatibilidad con registros
+         * antiguos cuyo dateKey podía
+         * ser solamente YYYY-MM-DD.
+         */
+        let legacyDate:
+          | Date
+          | null = null;
+
+        if (
+          /^\d{4}-\d{2}-\d{2}$/.test(
+            record.dateKey ?? '',
+          )
+        ) {
+          legacyDate =
+            new Date(
+              `${record.dateKey}T00:00:00.000Z`,
+            );
+        } else if (
+          record.periodStart
+        ) {
+          legacyDate =
+            new Date(
+              record.periodStart,
+            );
+        } else if (
+          record.completedAt
+        ) {
+          legacyDate =
+            this.getCalendarDate(
+              record.completedAt,
+              safeTimezone,
+            );
+        }
+
+        if (
+          legacyDate &&
+          !Number.isNaN(
+            legacyDate.getTime(),
+          )
+        ) {
+          const {
+            year,
+            week,
+          } =
+            this.getIsoWeek(
+              legacyDate,
+            );
+
+          recordWeekKey =
+            `weekly:${year}-W${String(
+              week,
+            ).padStart(
+              2,
+              '0',
+            )}`;
+        }
+      }
+
+      if (
+        !recordWeekKey
+      ) {
+        continue;
+      }
+
+      const habitId =
+        String(
+          record.habitId,
+        );
+
+      const completedHabits =
+        completedByWeek.get(
+          recordWeekKey,
+        ) ??
+        new Set<string>();
+
+      completedHabits.add(
+        habitId,
+      );
+
+      completedByWeek.set(
+        recordWeekKey,
+        completedHabits,
+      );
+    }
+
+    type WeekStatus = {
+      weekKey: string;
+
+      hasHabits:
+        boolean;
+
+      completed:
+        boolean;
+    };
+
+    const weeks:
+      WeekStatus[] = [];
+
+    /*
+     * Recorremos semana por semana
+     * desde la semana más antigua
+     * hasta la semana actual.
+     */
+    const cursor =
+      new Date(
+        earliestWeekStart.getTime(),
+      );
+
+    while (
+      cursor.getTime() <=
+      currentWeekStart.getTime()
+    ) {
+      const weekStart =
+        new Date(
+          cursor.getTime(),
+        );
+
+      const weekEnd =
+        new Date(
+          weekStart.getTime(),
+        );
+
+      weekEnd.setUTCDate(
+        weekEnd.getUTCDate() +
+          6,
+      );
+
+      const {
+        year,
+        week,
+      } =
+        this.getIsoWeek(
+          weekStart,
+        );
+
+      const weekKey =
+        `weekly:${year}-W${String(
+          week,
+        ).padStart(
+          2,
+          '0',
+        )}`;
+
+      /*
+       * Un hábito semanal corresponde
+       * a esta semana si su intervalo
+       * startDate/endDate intersecta
+       * cualquier día de la semana.
+       *
+       * Ejemplo:
+       * si se creó el miércoles,
+       * esa primera semana sí cuenta.
+       */
+      const expectedHabits =
+        weeklyHabits.filter(
+          (habit) => {
+            const habitStart =
+              new Date(
+                Date.UTC(
+                  habit.startDate
+                    .getUTCFullYear(),
+
+                  habit.startDate
+                    .getUTCMonth(),
+
+                  habit.startDate
+                    .getUTCDate(),
+                ),
+              );
+
+            const habitEnd =
+              habit.endDate
+                ? new Date(
+                    Date.UTC(
+                      habit.endDate
+                        .getUTCFullYear(),
+
+                      habit.endDate
+                        .getUTCMonth(),
+
+                      habit.endDate
+                        .getUTCDate(),
+                    ),
+                  )
+                : null;
+
+            if (
+              habitStart.getTime() >
+              weekEnd.getTime()
+            ) {
+              return false;
+            }
+
+            if (
+              habitEnd &&
+              habitEnd.getTime() <
+                weekStart.getTime()
+            ) {
+              return false;
+            }
+
+            return true;
+          },
+        );
+
+      if (
+        expectedHabits.length ===
+        0
+      ) {
+        weeks.push({
+          weekKey,
+          hasHabits: false,
+          completed: false,
+        });
+
+        cursor.setUTCDate(
+          cursor.getUTCDate() +
+            7,
+        );
+
+        continue;
+      }
+
+      const completedHabits =
+        completedByWeek.get(
+          weekKey,
+        ) ??
+        new Set<string>();
+
+      /*
+       * La semana está completada
+       * solamente si TODOS los hábitos
+       * semanales esperados se
+       * completaron.
+       */
+      const completed =
+        expectedHabits.every(
+          (habit) =>
+            completedHabits.has(
+              String(
+                habit._id,
+              ),
+            ),
+        );
+
+      weeks.push({
+        weekKey,
+        hasHabits: true,
+        completed,
+      });
+
+      cursor.setUTCDate(
+        cursor.getUTCDate() +
+          7,
+      );
+    }
+
+    /*
+     * MEJOR RACHA SEMANAL
+     *
+     * Las semanas sin hábitos se
+     * ignoran.
+     *
+     * La semana actual incompleta
+     * todavía no rompe la racha.
+     */
+    let runningStreak =
+      0;
+
+    let bestStreak =
+      0;
+
+    for (
+      const week of weeks
+    ) {
+      if (
+        !week.hasHabits
+      ) {
+        continue;
+      }
+
+      if (
+        week.completed
+      ) {
+        runningStreak +=
+          1;
+
+        bestStreak =
+          Math.max(
+            bestStreak,
+            runningStreak,
+          );
+
+        continue;
+      }
+
+      if (
+        week.weekKey ===
+        currentWeekKey
+      ) {
+        continue;
+      }
+
+      runningStreak =
+        0;
+    }
+
+    /*
+     * RACHA SEMANAL ACTUAL
+     *
+     * Recorremos desde la semana
+     * presente hacia atrás.
+     *
+     * Si la semana actual todavía no
+     * se completa, simplemente la
+     * ignoramos hasta que termine.
+     */
+    let currentStreak =
+      0;
+
+    for (
+      let index =
+        weeks.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      const week =
+        weeks[index];
+
+      if (
+        !week.hasHabits
+      ) {
+        continue;
+      }
+
+      if (
+        week.weekKey ===
+          currentWeekKey &&
+        !week.completed
+      ) {
+        continue;
+      }
+
+      if (
+        week.completed
+      ) {
+        currentStreak +=
+          1;
+
+        continue;
+      }
+
+      break;
+    }
+
+    return {
+      hasWeeklyHabits: true,
+
+      currentStreak,
+
+      bestStreak,
+    };
+  }
+  
   async getHabitHistory(
     habitId: string,
     userId: string,
