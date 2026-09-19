@@ -1,8 +1,10 @@
 import {
   getDailyStreak,
   getHabitHistory,
+  getMonthlyProgress,
   getWeeklyProgress,
   getWeeklyStreak,
+  type MonthlyProgressResponse,
   type WeeklyProgressResponse,
 } from "@/services/habit-records.service";
 
@@ -26,6 +28,9 @@ export type DashboardViewData =
   DashboardData & {
     weeklyProgress:
       WeeklyProgressResponse;
+
+    monthlyProgress:
+      MonthlyProgressResponse;
   };
 
 function getCalendarDate(
@@ -328,9 +333,6 @@ function getProgressPercent(
  * Obtiene y prepara toda la
  * información necesaria para
  * renderizar el Dashboard.
- *
- * page.tsx no necesita conocer
- * cómo se calculan estos valores.
  */
 export async function getDashboardData():
   Promise<DashboardViewData> {
@@ -341,12 +343,14 @@ export async function getDashboardData():
    * - racha diaria
    * - racha semanal
    * - progreso semanal
+   * - progreso mensual
    */
   const [
     habits,
     dailyStreak,
     weeklyStreak,
     weeklyProgress,
+    monthlyProgress,
   ] =
     await Promise.all([
       getHabits(),
@@ -356,6 +360,8 @@ export async function getDashboardData():
       getWeeklyStreak(),
 
       getWeeklyProgress(),
+
+      getMonthlyProgress(),
     ]);
 
   const activeHabits =
@@ -377,10 +383,6 @@ export async function getDashboardData():
    * Para el resumen mostramos
    * solamente hábitos que
    * corresponden al día actual.
-   *
-   * Esto también respeta los
-   * días configurados para
-   * frecuencia personalizada.
    */
   const availableHabits =
     activeHabits.filter(
@@ -430,8 +432,7 @@ export async function getDashboardData():
 
           /*
            * Compatibilidad con
-           * registros antiguos que
-           * guardaban simplemente:
+           * registros antiguos:
            *
            * YYYY-MM-DD
            */
@@ -496,8 +497,8 @@ export async function getDashboardData():
 
           /*
            * "Completados hoy" cuenta
-           * solamente hábitos cuya
-           * finalización ocurrió hoy.
+           * únicamente finalizaciones
+           * que ocurrieron hoy.
            */
           const completedToday =
             Boolean(
@@ -542,9 +543,8 @@ export async function getDashboardData():
     ).length;
 
   /*
-   * Promedio de cumplimiento
-   * de los hábitos que aplican
-   * al momento actual.
+   * Promedio del progreso
+   * de los hábitos actuales.
    */
   const dailyProgress =
     habitsWithStatus.length ===
@@ -582,5 +582,7 @@ export async function getDashboardData():
     weeklyStreak,
 
     weeklyProgress,
+
+    monthlyProgress,
   };
 }

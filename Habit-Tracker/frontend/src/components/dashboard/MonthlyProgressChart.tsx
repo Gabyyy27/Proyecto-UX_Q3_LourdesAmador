@@ -9,32 +9,30 @@ import {
 } from "@mui/material";
 
 import {
-  BarChart,
-} from "@mui/x-charts/BarChart";
+  LineChart,
+} from "@mui/x-charts/LineChart";
 
 import type {
-  WeeklyProgressResponse,
+  MonthlyProgressResponse,
 } from "@/services/habit-records.service";
 
-type WeeklyProgressChartProps = {
-  data: WeeklyProgressResponse;
+type MonthlyProgressChartProps = {
+  data: MonthlyProgressResponse;
 };
 
-export function WeeklyProgressChart({
+export function MonthlyProgressChart({
   data,
-}: WeeklyProgressChartProps) {
-  const hasScheduledHabits =
+}: MonthlyProgressChartProps) {
+  /*
+   * Una semana con percentage = null
+   * todavía no tiene información
+   * medible.
+   */
+  const hasMeasurableData =
     data.points.some(
       (point) =>
-        point.scheduledHabits >
-        0
-    );
-
-  const chartValues:
-    Array<number | null> =
-    data.points.map(
-      (point) =>
-        point.percentage
+        point.percentage !==
+        null
     );
 
   const labels:
@@ -42,6 +40,13 @@ export function WeeklyProgressChart({
     data.points.map(
       (point) =>
         point.label
+    );
+
+  const chartValues:
+    Array<number | null> =
+    data.points.map(
+      (point) =>
+        point.percentage
     );
 
   return (
@@ -55,7 +60,7 @@ export function WeeklyProgressChart({
                 fontWeight: 700,
               }}
             >
-              Progreso semanal
+              Progreso mensual
             </Typography>
 
             <Typography
@@ -65,14 +70,13 @@ export function WeeklyProgressChart({
                 mt: 0.25,
               }}
             >
-              Cumplimiento de tus
-              hábitos diarios y
-              personalizados durante
-              la semana actual.
+              Tendencia semanal de tu
+              cumplimiento durante el
+              mes actual.
             </Typography>
           </Box>
 
-          {!hasScheduledHabits ? (
+          {!hasMeasurableData ? (
             <Box
               sx={{
                 minHeight: 240,
@@ -95,10 +99,9 @@ export function WeeklyProgressChart({
                 variant="body2"
                 color="text.secondary"
               >
-                Todavía no hay hábitos
-                diarios o personalizados
-                programados para esta
-                semana.
+                Todavía no hay datos
+                suficientes para mostrar
+                tu progreso mensual.
               </Typography>
             </Box>
           ) : (
@@ -112,12 +115,12 @@ export function WeeklyProgressChart({
                   "hidden",
               }}
             >
-              <BarChart
+              <LineChart
                 height={300}
                 xAxis={[
                   {
                     scaleType:
-                      "band",
+                      "point",
 
                     data:
                       labels,
@@ -154,8 +157,16 @@ export function WeeklyProgressChart({
                         null
                           ? "Sin datos"
                           : `${value}%`,
+
+                    showMark: true,
+
+                    curve:
+                      "linear",
                   },
                 ]}
+                grid={{
+                  horizontal: true,
+                }}
                 margin={{
                   left: 45,
 
@@ -169,15 +180,16 @@ export function WeeklyProgressChart({
             </Box>
           )}
 
-          {hasScheduledHabits ? (
+          {hasMeasurableData ? (
             <Typography
               variant="caption"
               color="text.secondary"
             >
-              Los días futuros o sin
-              hábitos programados no se
-              contabilizan como
-              incumplimiento.
+              Cada punto representa el
+              promedio de cumplimiento de
+              una semana del mes. Las
+              semanas futuras no se
+              contabilizan.
             </Typography>
           ) : null}
         </Stack>

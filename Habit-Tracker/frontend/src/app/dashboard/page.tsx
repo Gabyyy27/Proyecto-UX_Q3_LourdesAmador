@@ -22,6 +22,10 @@ import {
 } from "notistack";
 
 import {
+  MonthlyProgressChart,
+} from "@/components/dashboard/MonthlyProgressChart";
+
+import {
   StatCard,
 } from "@/components/dashboard/StatCard";
 
@@ -194,7 +198,6 @@ export default function DashboardPage() {
             0
           }
         />
-
       </Box>
 
       {/*
@@ -312,19 +315,7 @@ export default function DashboardPage() {
           ) : null}
         </Box>
       </Stack>
-
-      {/*
-       * PROGRESO SEMANAL
-       */}
-      {data ? (
-        <WeeklyProgressChart
-          data={
-            data.weeklyProgress
-          }
-        />
-      ) : null}
-
-      {/*
+{/*
        * CUMPLIMIENTO ACTUAL
        */}
       <Card
@@ -342,11 +333,23 @@ export default function DashboardPage() {
                   "center",
               }}
             >
-              <Box>
+              <Box
+                sx={{
+                  minWidth: 0,
+                }}
+              >
                 <Typography
                   variant="h6"
                 >
                   Cumplimiento actual
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  Promedio del progreso
+                  de los hábitos.
                 </Typography>
               </Box>
 
@@ -382,6 +385,49 @@ export default function DashboardPage() {
       </Card>
 
       {/*
+       * GRÁFICAS
+       *
+       * Móvil:
+       * una debajo de otra.
+       *
+       * Escritorio:
+       * dos columnas.
+       */}
+      {data ? (
+        <Box
+          sx={{
+            display: "grid",
+
+            gridTemplateColumns: {
+              xs: "1fr",
+
+              lg: "repeat(2, minmax(0, 1fr))",
+            },
+
+            gap: 2,
+
+            alignItems:
+              "stretch",
+
+            "& > *": {
+              minWidth: 0,
+            },
+          }}
+        >
+          <WeeklyProgressChart
+            data={
+              data.weeklyProgress
+            }
+          />
+
+          <MonthlyProgressChart
+            data={
+              data.monthlyProgress
+            }
+          />
+        </Box>
+      ) : null}
+      {/*
        * RESUMEN DE HÁBITOS
        */}
       <Card
@@ -394,15 +440,6 @@ export default function DashboardPage() {
                 variant="h6"
               >
                 Resumen de hábitos
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                El seguimiento se
-                registra desde la
-                sección Hábitos.
               </Typography>
             </Box>
 

@@ -113,6 +113,32 @@ export type WeeklyProgressResponse = {
   points: WeeklyProgressPoint[];
 };
 
+export type MonthlyProgressPoint = {
+  label: string;
+
+  percentage: number | null;
+
+  weekStart: string;
+
+  weekEnd: string;
+
+  scheduledHabits: number;
+
+  completedHabits: number;
+
+  isFuture: boolean;
+};
+
+export type MonthlyProgressResponse = {
+  month: string;
+
+  monthStart: string;
+
+  monthEnd: string;
+
+  points: MonthlyProgressPoint[];
+};
+
 export async function completeHabit(
   habitId: string
 ): Promise<CompleteHabitResponse> {
@@ -172,6 +198,15 @@ export async function getWeeklyProgress(): Promise<WeeklyProgressResponse> {
   const response =
     await api.get<WeeklyProgressResponse>(
       "/habits/progress/weekly"
+    );
+
+  return response.data;
+}
+
+export async function getMonthlyProgress(): Promise<MonthlyProgressResponse> {
+  const response =
+    await api.get<MonthlyProgressResponse>(
+      "/habits/progress/monthly"
     );
 
   return response.data;
