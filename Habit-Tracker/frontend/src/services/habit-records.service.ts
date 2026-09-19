@@ -89,6 +89,30 @@ export type WeeklyStreakResponse = {
   bestStreak: number;
 };
 
+export type WeeklyProgressPoint = {
+  date: string;
+
+  label: string;
+
+  percentage: number | null;
+
+  scheduledHabits: number;
+
+  completedHabits: number;
+
+  isToday: boolean;
+
+  isFuture: boolean;
+};
+
+export type WeeklyProgressResponse = {
+  weekStart: string;
+
+  weekEnd: string;
+
+  points: WeeklyProgressPoint[];
+};
+
 export async function completeHabit(
   habitId: string
 ): Promise<CompleteHabitResponse> {
@@ -139,6 +163,15 @@ export async function getWeeklyStreak(): Promise<WeeklyStreakResponse> {
   const response =
     await api.get<WeeklyStreakResponse>(
       "/habits/streaks/weekly"
+    );
+
+  return response.data;
+}
+
+export async function getWeeklyProgress(): Promise<WeeklyProgressResponse> {
+  const response =
+    await api.get<WeeklyProgressResponse>(
+      "/habits/progress/weekly"
     );
 
   return response.data;

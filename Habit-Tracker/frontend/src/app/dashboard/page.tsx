@@ -21,319 +21,26 @@ import {
   useSnackbar,
 } from "notistack";
 
-import { StatCard } from "@/components/dashboard/StatCard";
-import { StreakCard } from "@/components/dashboard/StreakCard";
+import {
+  StatCard,
+} from "@/components/dashboard/StatCard";
 
 import {
-  getDailyStreak,
-  getHabitHistory,
-  getWeeklyStreak,
-} from "@/services/habit-records.service";
+  StreakCard,
+} from "@/components/dashboard/StreakCard";
 
 import {
-  getHabits,
-} from "@/services/habits.service";
+  WeeklyProgressChart,
+} from "@/components/dashboard/WeeklyProgressChart";
+
+import {
+  getDashboardData,
+  type DashboardViewData,
+} from "@/services/dashboard.service";
 
 import type {
-  Habit,
   HabitFrequency,
 } from "@/types/habit";
-
-import type {
-  DashboardData,
-} from "@/types/dashboard";
-
-const DASHBOARD_TIMEZONE =
-  "America/Tegucigalpa";
-
-function getCalendarDate(
-  date: Date,
-  timeZone: string
-) {
-  const formatter =
-    new Intl.DateTimeFormat(
-      "en-US",
-      {
-        timeZone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }
-    );
-
-  const parts =
-    formatter.formatToParts(
-      date
-    );
-
-  const year =
-    Number(
-      parts.find(
-        (part) =>
-          part.type === "year"
-      )?.value
-    );
-
-  const month =
-    Number(
-      parts.find(
-        (part) =>
-          part.type === "month"
-      )?.value
-    );
-
-  const day =
-    Number(
-      parts.find(
-        (part) =>
-          part.type === "day"
-      )?.value
-    );
-
-  return new Date(
-    Date.UTC(
-      year,
-      month - 1,
-      day
-    )
-  );
-}
-
-function formatCalendarDate(
-  date: Date
-) {
-  const year =
-    date.getUTCFullYear();
-
-  const month =
-    String(
-      date.getUTCMonth() + 1
-    ).padStart(
-      2,
-      "0"
-    );
-
-  const day =
-    String(
-      date.getUTCDate()
-    ).padStart(
-      2,
-      "0"
-    );
-
-  return `${year}-${month}-${day}`;
-}
-
-function getDateKey(
-  date: Date,
-  timeZone: string
-) {
-  return formatCalendarDate(
-    getCalendarDate(
-      date,
-      timeZone
-    )
-  );
-}
-
-function getIsoWeek(
-  calendarDate: Date
-) {
-  const workingDate =
-    new Date(
-      calendarDate.getTime()
-    );
-
-  const weekday =
-    workingDate.getUTCDay() ||
-    7;
-
-  workingDate.setUTCDate(
-    workingDate.getUTCDate() +
-      4 -
-      weekday
-  );
-
-  const isoYear =
-    workingDate.getUTCFullYear();
-
-  const yearStart =
-    new Date(
-      Date.UTC(
-        isoYear,
-        0,
-        1
-      )
-    );
-
-  const week =
-    Math.ceil(
-      (
-        (
-          workingDate.getTime() -
-          yearStart.getTime()
-        ) /
-          86400000 +
-        1
-      ) / 7
-    );
-
-  return {
-    year: isoYear,
-    week,
-  };
-}
-
-function getCurrentPeriodKey(
-  frequency: HabitFrequency,
-  date: Date,
-  timeZone: string
-) {
-  const calendarDate =
-    getCalendarDate(
-      date,
-      timeZone
-    );
-
-  const dateKey =
-    formatCalendarDate(
-      calendarDate
-    );
-
-  if (
-    frequency === "daily"
-  ) {
-    return `daily:${dateKey}`;
-  }
-
-  if (
-    frequency === "weekly"
-  ) {
-    const {
-      year,
-      week,
-    } =
-      getIsoWeek(
-        calendarDate
-      );
-
-    return `weekly:${year}-W${String(
-      week
-    ).padStart(
-      2,
-      "0"
-    )}`;
-  }
-
-  if (
-    frequency === "monthly"
-  ) {
-    const year =
-      calendarDate
-        .getUTCFullYear();
-
-    const month =
-      String(
-        calendarDate
-          .getUTCMonth() + 1
-      ).padStart(
-        2,
-        "0"
-      );
-
-    return `monthly:${year}-${month}`;
-  }
-
-  return `custom:${dateKey}`;
-}
-
-function getCurrentWeekday(
-  date: Date,
-  timeZone: string
-) {
-  return new Intl.DateTimeFormat(
-    "en-US",
-    {
-      timeZone,
-      weekday: "long",
-    }
-  )
-    .format(date)
-    .toLowerCase();
-}
-
-function isHabitAvailableToday(
-  habit: Habit,
-  date: Date,
-  timeZone: string
-) {
-  const today =
-    getDateKey(
-      date,
-      timeZone
-    );
-
-  const startDate =
-    habit.startDate.slice(
-      0,
-      10
-    );
-
-  if (
-    today < startDate
-  ) {
-    return false;
-  }
-
-  if (
-    habit.endDate &&
-    today >
-      habit.endDate.slice(
-        0,
-        10
-      )
-  ) {
-    return false;
-  }
-
-  if (
-    habit.frequency !==
-    "custom"
-  ) {
-    return true;
-  }
-
-  const weekday =
-    getCurrentWeekday(
-      date,
-      timeZone
-    );
-
-  return habit.customDays.includes(
-    weekday
-  );
-}
-
-function getProgressPercent(
-  currentValue: number,
-  targetValue: number
-) {
-  if (
-    targetValue <= 0
-  ) {
-    return 0;
-  }
-
-  return Math.min(
-    100,
-    Math.round(
-      (
-        currentValue /
-        targetValue
-      ) * 100
-    )
-  );
-}
 
 function getFrequencyLabel(
   frequency: HabitFrequency
@@ -365,7 +72,7 @@ export default function DashboardPage() {
     data,
     setData,
   ] =
-    useState<DashboardData | null>(
+    useState<DashboardViewData | null>(
       null
     );
 
@@ -380,223 +87,12 @@ export default function DashboardPage() {
       try {
         setLoading(true);
 
-        /*
-         * Cargamos en paralelo:
-         *
-         * - hábitos
-         * - racha diaria
-         * - racha semanal
-         */
-        const [
-          habits,
-          dailyStreak,
-          weeklyStreak,
-        ] =
-          await Promise.all([
-            getHabits(),
-            getDailyStreak(),
-            getWeeklyStreak(),
-          ]);
+        const dashboardData =
+          await getDashboardData();
 
-        const activeHabits =
-          habits.filter(
-            (habit) =>
-              habit.active
-          );
-
-        const now =
-          new Date();
-
-        const today =
-          getDateKey(
-            now,
-            DASHBOARD_TIMEZONE
-          );
-
-        const availableHabits =
-          activeHabits.filter(
-            (habit) =>
-              isHabitAvailableToday(
-                habit,
-                now,
-                DASHBOARD_TIMEZONE
-              )
-          );
-
-        const habitsWithStatus =
-          await Promise.all(
-            availableHabits.map(
-              async (habit) => {
-                const history =
-                  await getHabitHistory(
-                    habit._id
-                  );
-
-                const periodKey =
-                  getCurrentPeriodKey(
-                    habit.frequency,
-                    now,
-                    DASHBOARD_TIMEZONE
-                  );
-
-                /*
-                 * Primero usamos la
-                 * nueva clave de período.
-                 */
-                let currentRecord =
-                  history.find(
-                    (record) =>
-                      record.dateKey ===
-                      periodKey
-                  );
-
-                /*
-                 * Compatibilidad con
-                 * registros antiguos
-                 * YYYY-MM-DD.
-                 */
-                if (
-                  !currentRecord &&
-                  (
-                    habit.frequency ===
-                      "daily" ||
-                    habit.frequency ===
-                      "custom"
-                  )
-                ) {
-                  currentRecord =
-                    history.find(
-                      (record) =>
-                        record.dateKey ===
-                        today
-                    );
-                }
-
-                const trackingType =
-                  habit.trackingType ??
-                  "binary";
-
-                const targetValue =
-                  currentRecord
-                    ?.targetValue ??
-                  (
-                    trackingType ===
-                    "binary"
-                      ? 1
-                      : habit.targetValue ??
-                        1
-                  );
-
-                const currentValue =
-                  currentRecord
-                    ?.currentValue ??
-                  (
-                    currentRecord
-                      ?.completed
-                      ? targetValue
-                      : 0
-                  );
-
-                const periodCompleted =
-                  currentRecord
-                    ?.completed ??
-                  false;
-
-                const progressPercent =
-                  periodCompleted
-                    ? 100
-                    : getProgressPercent(
-                        currentValue,
-                        targetValue
-                      );
-
-                const completedAt =
-                  currentRecord
-                    ?.completedAt;
-
-                /*
-                 * "Completados hoy"
-                 * solamente cuenta
-                 * finalizaciones que
-                 * ocurrieron hoy.
-                 */
-                const completedToday =
-                  Boolean(
-                    periodCompleted &&
-                      completedAt &&
-                      getDateKey(
-                        new Date(
-                          completedAt
-                        ),
-                        DASHBOARD_TIMEZONE
-                      ) === today
-                  );
-
-                return {
-                  ...habit,
-
-                  completedToday,
-
-                  periodCompleted,
-
-                  currentValue,
-
-                  periodTargetValue:
-                    targetValue,
-
-                  periodUnit:
-                    currentRecord
-                      ?.unit ??
-                    habit.unit ??
-                    "",
-
-                  progressPercent,
-                };
-              }
-            )
-          );
-
-        const completedToday =
-          habitsWithStatus.filter(
-            (habit) =>
-              habit.completedToday
-          ).length;
-
-        const dailyProgress =
-          habitsWithStatus.length ===
-          0
-            ? 0
-            : Math.round(
-                habitsWithStatus.reduce(
-                  (
-                    total,
-                    habit
-                  ) =>
-                    total +
-                    (
-                      habit.progressPercent ??
-                      0
-                    ),
-                  0
-                ) /
-                  habitsWithStatus.length
-              );
-
-        setData({
-          activeHabits:
-            activeHabits.length,
-
-          completedToday,
-
-          dailyProgress,
-
-          todayHabits:
-            habitsWithStatus,
-
-          dailyStreak,
-
-          weeklyStreak,
-        });
+        setData(
+          dashboardData
+        );
       } catch (loadError) {
         enqueueSnackbar(
           loadError instanceof Error
@@ -623,9 +119,12 @@ export default function DashboardPage() {
       <Box
         sx={{
           minHeight: 400,
+
           display: "flex",
+
           justifyContent:
             "center",
+
           alignItems:
             "center",
         }}
@@ -637,6 +136,9 @@ export default function DashboardPage() {
 
   return (
     <Stack spacing={3}>
+      {/*
+       * ENCABEZADO
+       */}
       <Box>
         <Typography
           variant="h5"
@@ -666,12 +168,13 @@ export default function DashboardPage() {
         sx={{
           display: "grid",
 
-          gridTemplateColumns:
-            {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              lg: "repeat(3, 1fr)",
-            },
+          gridTemplateColumns: {
+            xs: "1fr",
+
+            sm: "repeat(2, 1fr)",
+
+            lg: "repeat(3, 1fr)",
+          },
 
           gap: 2,
         }}
@@ -692,13 +195,6 @@ export default function DashboardPage() {
           }
         />
 
-        <StatCard
-          label="Cumplimiento actual"
-          value={`${
-            data?.dailyProgress ??
-            0
-          }%`}
-        />
       </Box>
 
       {/*
@@ -728,17 +224,18 @@ export default function DashboardPage() {
           sx={{
             display: "grid",
 
-            gridTemplateColumns:
-              {
-                xs: "1fr",
-                sm:
-                  "repeat(2, 1fr)",
-                lg:
-                  data?.weeklyStreak
-                    .hasWeeklyHabits
-                    ? "repeat(4, 1fr)"
-                    : "repeat(2, 1fr)",
-              },
+            gridTemplateColumns: {
+              xs: "1fr",
+
+              sm:
+                "repeat(2, 1fr)",
+
+              lg:
+                data?.weeklyStreak
+                  .hasWeeklyHabits
+                  ? "repeat(4, 1fr)"
+                  : "repeat(2, 1fr)",
+            },
 
             gap: 2,
           }}
@@ -781,11 +278,13 @@ export default function DashboardPage() {
               <StreakCard
                 label="Racha semanal"
                 value={
-                  data.weeklyStreak
+                  data
+                    .weeklyStreak
                     .currentStreak
                 }
                 unit={
-                  data.weeklyStreak
+                  data
+                    .weeklyStreak
                     .currentStreak ===
                   1
                     ? "semana"
@@ -796,11 +295,13 @@ export default function DashboardPage() {
               <StreakCard
                 label="Mejor racha semanal"
                 value={
-                  data.weeklyStreak
+                  data
+                    .weeklyStreak
                     .bestStreak
                 }
                 unit={
-                  data.weeklyStreak
+                  data
+                    .weeklyStreak
                     .bestStreak ===
                   1
                     ? "semana"
@@ -813,7 +314,18 @@ export default function DashboardPage() {
       </Stack>
 
       {/*
-       * CUMPLIMIENTO
+       * PROGRESO SEMANAL
+       */}
+      {data ? (
+        <WeeklyProgressChart
+          data={
+            data.weeklyProgress
+          }
+        />
+      ) : null}
+
+      {/*
+       * CUMPLIMIENTO ACTUAL
        */}
       <Card
         variant="outlined"
@@ -836,20 +348,14 @@ export default function DashboardPage() {
                 >
                   Cumplimiento actual
                 </Typography>
-
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                >
-                  Promedio del progreso
-                  de los hábitos.
-                </Typography>
               </Box>
 
               <Typography
                 sx={{
                   fontWeight: 700,
+
                   flexShrink: 0,
+
                   ml: 2,
                 }}
               >
@@ -867,6 +373,7 @@ export default function DashboardPage() {
               }
               sx={{
                 height: 8,
+
                 borderRadius: 999,
               }}
             />
@@ -905,6 +412,7 @@ export default function DashboardPage() {
               <Box
                 sx={{
                   py: 5,
+
                   textAlign:
                     "center",
                 }}
@@ -918,9 +426,7 @@ export default function DashboardPage() {
                 </Typography>
               </Box>
             ) : (
-              <Stack
-                spacing={0}
-              >
+              <Stack spacing={0}>
                 {data?.todayHabits.map(
                   (habit) => {
                     const completed =
@@ -966,11 +472,6 @@ export default function DashboardPage() {
                             },
                         }}
                       >
-                        {/*
-                         * Pill siempre a la
-                         * derecha, también
-                         * en móvil.
-                         */}
                         <Stack
                           direction="row"
                           spacing={1.5}
@@ -989,6 +490,7 @@ export default function DashboardPage() {
                             spacing={0.25}
                             sx={{
                               flex: 1,
+
                               minWidth: 0,
                             }}
                           >
@@ -1031,6 +533,7 @@ export default function DashboardPage() {
                             variant="outlined"
                             sx={{
                               flexShrink: 0,
+
                               ml: 1,
                             }}
                           />
