@@ -59,7 +59,7 @@ export class HabitRecordsService {
 
     private readonly habitsService:
       HabitsService,
-  ) {}
+  ) { }
 
   /*
    * Verifica que la zona horaria
@@ -257,8 +257,8 @@ export class HabitRecordsService {
 
     workingDate.setUTCDate(
       workingDate.getUTCDate() +
-        4 -
-        weekday,
+      4 -
+      weekday,
     );
 
     const isoYear =
@@ -280,7 +280,7 @@ export class HabitRecordsService {
             workingDate.getTime() -
             yearStart.getTime()
           ) /
-            86400000 +
+          86400000 +
           1
         ) / 7,
       );
@@ -345,8 +345,8 @@ export class HabitRecordsService {
 
       monday.setUTCDate(
         monday.getUTCDate() -
-          weekday +
-          1,
+        weekday +
+        1,
       );
 
       const sunday =
@@ -356,7 +356,7 @@ export class HabitRecordsService {
 
       sunday.setUTCDate(
         sunday.getUTCDate() +
-          6,
+        6,
       );
 
       const {
@@ -565,7 +565,7 @@ export class HabitRecordsService {
   } {
     return (
       typeof error ===
-        'object' &&
+      'object' &&
       error !== null &&
       'code' in error &&
       (
@@ -596,7 +596,7 @@ export class HabitRecordsService {
 
     const targetValue =
       trackingType ===
-      HabitTrackingType.BINARY
+        HabitTrackingType.BINARY
         ? 1
         : habit.targetValue;
 
@@ -650,7 +650,7 @@ export class HabitRecordsService {
 
                 unit:
                   trackingType ===
-                  HabitTrackingType.QUANTITY
+                    HabitTrackingType.QUANTITY
                     ? habit.unit ?? ''
                     : '',
 
@@ -844,7 +844,7 @@ export class HabitRecordsService {
   ) {
     if (
       typeof amount !==
-        'number' ||
+      'number' ||
       !Number.isFinite(
         amount,
       ) ||
@@ -998,7 +998,7 @@ export class HabitRecordsService {
     if (
       !updatedRecord.completed &&
       updatedRecord.currentValue >=
-        updatedRecord.targetValue
+      updatedRecord.targetValue
     ) {
       await this.habitRecordModel
         .updateOne(
@@ -1348,10 +1348,10 @@ export class HabitRecordsService {
       dateKey: string;
 
       hasHabits:
-        boolean;
+      boolean;
 
       completed:
-        boolean;
+      boolean;
     };
 
     const days:
@@ -1395,11 +1395,11 @@ export class HabitRecordsService {
             const endDate =
               habit.endDate
                 ? habit.endDate
-                    .toISOString()
-                    .slice(
-                      0,
-                      10,
-                    )
+                  .toISOString()
+                  .slice(
+                    0,
+                    10,
+                  )
                 : null;
 
             if (
@@ -1412,7 +1412,7 @@ export class HabitRecordsService {
             if (
               endDate &&
               dateKey >
-                endDate
+              endDate
             ) {
               return false;
             }
@@ -1433,7 +1433,7 @@ export class HabitRecordsService {
 
         cursor.setUTCDate(
           cursor.getUTCDate() +
-            1,
+          1,
         );
 
         continue;
@@ -1468,7 +1468,7 @@ export class HabitRecordsService {
 
       cursor.setUTCDate(
         cursor.getUTCDate() +
-          1,
+        1,
       );
     }
 
@@ -1556,7 +1556,7 @@ export class HabitRecordsService {
 
       if (
         day.dateKey ===
-          todayKey &&
+        todayKey &&
         !day.completed
       ) {
         continue;
@@ -1583,17 +1583,17 @@ export class HabitRecordsService {
     };
   }
 
-    /*
-   * RACHA SEMANAL
-   *
-   * Calcula:
-   * - racha semanal actual
-   * - mejor racha semanal
-   *
-   * Las semanas utilizan ISO:
-   *
-   * weekly:2026-W38
-   */
+  /*
+ * RACHA SEMANAL
+ *
+ * Calcula:
+ * - racha semanal actual
+ * - mejor racha semanal
+ *
+ * Las semanas utilizan ISO:
+ *
+ * weekly:2026-W38
+ */
   async getWeeklyStreak(
     userId: string,
     timezone: string,
@@ -1688,8 +1688,8 @@ export class HabitRecordsService {
 
       weekStart.setUTCDate(
         weekStart.getUTCDate() -
-          weekday +
-          1,
+        weekday +
+        1,
       );
 
       return weekStart;
@@ -1702,10 +1702,10 @@ export class HabitRecordsService {
 
     const {
       year:
-        currentWeekYear,
+      currentWeekYear,
 
       week:
-        currentWeekNumber,
+      currentWeekNumber,
     } =
       this.getIsoWeek(
         currentWeekStart,
@@ -1926,10 +1926,10 @@ export class HabitRecordsService {
       weekKey: string;
 
       hasHabits:
-        boolean;
+      boolean;
 
       completed:
-        boolean;
+      boolean;
     };
 
     const weeks:
@@ -1961,7 +1961,7 @@ export class HabitRecordsService {
 
       weekEnd.setUTCDate(
         weekEnd.getUTCDate() +
-          6,
+        6,
       );
 
       const {
@@ -2010,17 +2010,17 @@ export class HabitRecordsService {
             const habitEnd =
               habit.endDate
                 ? new Date(
-                    Date.UTC(
-                      habit.endDate
-                        .getUTCFullYear(),
+                  Date.UTC(
+                    habit.endDate
+                      .getUTCFullYear(),
 
-                      habit.endDate
-                        .getUTCMonth(),
+                    habit.endDate
+                      .getUTCMonth(),
 
-                      habit.endDate
-                        .getUTCDate(),
-                    ),
-                  )
+                    habit.endDate
+                      .getUTCDate(),
+                  ),
+                )
                 : null;
 
             if (
@@ -2033,7 +2033,7 @@ export class HabitRecordsService {
             if (
               habitEnd &&
               habitEnd.getTime() <
-                weekStart.getTime()
+              weekStart.getTime()
             ) {
               return false;
             }
@@ -2054,7 +2054,7 @@ export class HabitRecordsService {
 
         cursor.setUTCDate(
           cursor.getUTCDate() +
-            7,
+          7,
         );
 
         continue;
@@ -2090,7 +2090,7 @@ export class HabitRecordsService {
 
       cursor.setUTCDate(
         cursor.getUTCDate() +
-          7,
+        7,
       );
     }
 
@@ -2174,7 +2174,7 @@ export class HabitRecordsService {
 
       if (
         week.weekKey ===
-          currentWeekKey &&
+        currentWeekKey &&
         !week.completed
       ) {
         continue;
@@ -2200,23 +2200,23 @@ export class HabitRecordsService {
       bestStreak,
     };
   }
-    /*
-   * PROGRESO SEMANAL
-   *
-   * Representa el cumplimiento diario
-   * de la semana calendario actual:
-   *
-   * Lun - Mar - Mié - Jue - Vie - Sáb - Dom
-   *
-   * Participan:
-   * - hábitos DAILY
-   * - hábitos CUSTOM únicamente en los
-   *   días que tengan programados
-   *
-   * Los hábitos WEEKLY no se mezclan
-   * aquí porque poseen un período
-   * semanal propio.
-   */
+  /*
+ * PROGRESO SEMANAL
+ *
+ * Representa el cumplimiento diario
+ * de la semana calendario actual:
+ *
+ * Lun - Mar - Mié - Jue - Vie - Sáb - Dom
+ *
+ * Participan:
+ * - hábitos DAILY
+ * - hábitos CUSTOM únicamente en los
+ *   días que tengan programados
+ *
+ * Los hábitos WEEKLY no se mezclan
+ * aquí porque poseen un período
+ * semanal propio.
+ */
   async getWeeklyProgress(
     userId: string,
     timezone: string,
@@ -2244,9 +2244,9 @@ export class HabitRecordsService {
           habit.active &&
           (
             habit.frequency ===
-              HabitFrequency.DAILY ||
+            HabitFrequency.DAILY ||
             habit.frequency ===
-              HabitFrequency.CUSTOM
+            HabitFrequency.CUSTOM
           ),
       );
 
@@ -2271,8 +2271,8 @@ export class HabitRecordsService {
 
     weekStart.setUTCDate(
       weekStart.getUTCDate() -
-        weekday +
-        1,
+      weekday +
+      1,
     );
 
     const weekEnd =
@@ -2282,7 +2282,7 @@ export class HabitRecordsService {
 
     weekEnd.setUTCDate(
       weekEnd.getUTCDate() +
-        6,
+      6,
     );
 
     const dayLabels = [
@@ -2330,7 +2330,7 @@ export class HabitRecordsService {
 
       date.setUTCDate(
         date.getUTCDate() +
-          index,
+        index,
       );
 
       const dateKey =
@@ -2364,22 +2364,22 @@ export class HabitRecordsService {
       habitIds.length === 0
         ? []
         : await this.habitRecordModel
-            .find({
-              userId:
-                new Types.ObjectId(
-                  userId,
-                ),
+          .find({
+            userId:
+              new Types.ObjectId(
+                userId,
+              ),
 
-              habitId: {
-                $in:
-                  habitIds,
-              },
+            habitId: {
+              $in:
+                habitIds,
+            },
 
-              dateKey: {
-                $in:
-                  acceptedDateKeys,
-              },
-            });
+            dateKey: {
+              $in:
+                acceptedDateKeys,
+            },
+          });
 
     /*
      * Índice:
@@ -2476,7 +2476,7 @@ export class HabitRecordsService {
 
       date.setUTCDate(
         date.getUTCDate() +
-          index,
+        index,
       );
 
       const dateKey =
@@ -2507,11 +2507,11 @@ export class HabitRecordsService {
             const endDate =
               habit.endDate
                 ? habit.endDate
-                    .toISOString()
-                    .slice(
-                      0,
-                      10,
-                    )
+                  .toISOString()
+                  .slice(
+                    0,
+                    10,
+                  )
                 : null;
 
             if (
@@ -2524,7 +2524,7 @@ export class HabitRecordsService {
             if (
               endDate &&
               dateKey >
-                endDate
+              endDate
             ) {
               return false;
             }
@@ -2548,7 +2548,7 @@ export class HabitRecordsService {
              */
             const weekdayName =
               weekdayNames[
-                index
+              index
               ];
 
             return Boolean(
@@ -2570,7 +2570,7 @@ export class HabitRecordsService {
       if (
         isFuture ||
         expectedHabits.length ===
-          0
+        0
       ) {
         points.push({
           date:
@@ -2578,7 +2578,7 @@ export class HabitRecordsService {
 
           label:
             dayLabels[
-              index
+            index
             ],
 
           percentage:
@@ -2634,9 +2634,9 @@ export class HabitRecordsService {
               1;
           } else if (
             record.trackingType ===
-              HabitTrackingType.QUANTITY &&
+            HabitTrackingType.QUANTITY &&
             record.targetValue >
-              0
+            0
           ) {
             habitProgress =
               Math.min(
@@ -2658,7 +2658,7 @@ export class HabitRecordsService {
       const percentage =
         Math.round(
           totalProgress /
-            expectedHabits.length,
+          expectedHabits.length,
         );
 
       points.push({
@@ -2667,7 +2667,7 @@ export class HabitRecordsService {
 
         label:
           dayLabels[
-            index
+          index
           ],
 
         percentage,
@@ -2699,7 +2699,648 @@ export class HabitRecordsService {
       points,
     };
   }
-  
+  /*
+ * PROGRESO MENSUAL
+ *
+ * Calcula la tendencia de cumplimiento
+ * del mes calendario actual agrupando
+ * los días por semanas.
+ *
+ * Participan:
+ * - hábitos DAILY
+ * - hábitos CUSTOM únicamente en los
+ *   días que tengan programados
+ *
+ * Los días futuros no se consideran
+ * incumplimiento.
+ *
+ * El resultado se utilizará para una
+ * LineChart en el Dashboard.
+ */
+  async getMonthlyProgress(
+    userId: string,
+    timezone: string,
+  ) {
+    const safeTimezone =
+      this.validateTimezone(
+        timezone,
+      );
+
+    const habits =
+      await this.habitsService
+        .findAll(
+          userId,
+        );
+
+    /*
+     * Por ahora trabajamos con hábitos
+     * activos actuales porque el modelo
+     * no almacena historial de
+     * activaciones/desactivaciones.
+     */
+    const trackableHabits =
+      habits.filter(
+        (habit) =>
+          habit.active &&
+          (
+            habit.frequency ===
+            HabitFrequency.DAILY ||
+            habit.frequency ===
+            HabitFrequency.CUSTOM
+          ),
+      );
+
+    const today =
+      this.getCalendarDate(
+        new Date(),
+        safeTimezone,
+      );
+
+    const year =
+      today.getUTCFullYear();
+
+    const monthIndex =
+      today.getUTCMonth();
+
+    const monthStart =
+      new Date(
+        Date.UTC(
+          year,
+          monthIndex,
+          1,
+        ),
+      );
+
+    const monthEnd =
+      new Date(
+        Date.UTC(
+          year,
+          monthIndex + 1,
+          0,
+        ),
+      );
+
+    const monthKey =
+      `${year}-${String(
+        monthIndex + 1,
+      ).padStart(
+        2,
+        '0',
+      )}`;
+
+    const weekdayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
+
+    /*
+     * Construimos todas las claves
+     * posibles del mes:
+     *
+     * daily:YYYY-MM-DD
+     * custom:YYYY-MM-DD
+     * YYYY-MM-DD
+     *
+     * La última permite compatibilidad
+     * con registros antiguos.
+     */
+    const acceptedDateKeys:
+      string[] = [];
+
+    const dateCursor =
+      new Date(
+        monthStart.getTime(),
+      );
+
+    while (
+      dateCursor.getTime() <=
+      monthEnd.getTime()
+    ) {
+      const dateKey =
+        this.formatCalendarDate(
+          dateCursor,
+        );
+
+      acceptedDateKeys.push(
+        `daily:${dateKey}`,
+        `custom:${dateKey}`,
+        dateKey,
+      );
+
+      dateCursor.setUTCDate(
+        dateCursor.getUTCDate() +
+        1,
+      );
+    }
+
+    const habitIds =
+      trackableHabits.map(
+        (habit) =>
+          new Types.ObjectId(
+            String(
+              habit._id,
+            ),
+          ),
+      );
+
+    const records =
+      habitIds.length === 0
+        ? []
+        : await this.habitRecordModel
+          .find({
+            userId:
+              new Types.ObjectId(
+                userId,
+              ),
+
+            habitId: {
+              $in:
+                habitIds,
+            },
+
+            dateKey: {
+              $in:
+                acceptedDateKeys,
+            },
+          });
+
+    /*
+     * Índice rápido:
+     *
+     * habitId|YYYY-MM-DD
+     *   -> HabitRecord
+     */
+    const recordsByHabitAndDate =
+      new Map<
+        string,
+        HabitRecordDocument
+      >();
+
+    for (
+      const record of records
+    ) {
+      let calendarDateKey:
+        | string
+        | null = null;
+
+      if (
+        record.dateKey?.startsWith(
+          'daily:',
+        )
+      ) {
+        calendarDateKey =
+          record.dateKey.replace(
+            'daily:',
+            '',
+          );
+      } else if (
+        record.dateKey?.startsWith(
+          'custom:',
+        )
+      ) {
+        calendarDateKey =
+          record.dateKey.replace(
+            'custom:',
+            '',
+          );
+      } else if (
+        /^\d{4}-\d{2}-\d{2}$/.test(
+          record.dateKey ?? '',
+        )
+      ) {
+        calendarDateKey =
+          record.dateKey;
+      }
+
+      if (
+        !calendarDateKey
+      ) {
+        continue;
+      }
+
+      const mapKey =
+        `${String(
+          record.habitId,
+        )}|${calendarDateKey}`;
+
+      const existing =
+        recordsByHabitAndDate.get(
+          mapKey,
+        );
+
+      /*
+       * Si existen registros antiguos
+       * y nuevos para la misma fecha,
+       * preferimos el formato actual.
+       */
+      if (
+        !existing ||
+        record.dateKey.includes(
+          ':',
+        )
+      ) {
+        recordsByHabitAndDate.set(
+          mapKey,
+          record,
+        );
+      }
+    }
+
+    type DayProgress = {
+      date: string;
+      percentage: number | null;
+      scheduledHabits: number;
+      completedHabits: number;
+      isFuture: boolean;
+    };
+
+    const days:
+      DayProgress[] = [];
+
+    const cursor =
+      new Date(
+        monthStart.getTime(),
+      );
+
+    /*
+     * Primero calculamos el progreso
+     * de cada día individual.
+     */
+    while (
+      cursor.getTime() <=
+      monthEnd.getTime()
+    ) {
+      const currentDate =
+        new Date(
+          cursor.getTime(),
+        );
+
+      const dateKey =
+        this.formatCalendarDate(
+          currentDate,
+        );
+
+      const isFuture =
+        currentDate.getTime() >
+        today.getTime();
+
+      const expectedHabits =
+        trackableHabits.filter(
+          (habit) => {
+            const startDate =
+              habit.startDate
+                .toISOString()
+                .slice(
+                  0,
+                  10,
+                );
+
+            const endDate =
+              habit.endDate
+                ? habit.endDate
+                  .toISOString()
+                  .slice(
+                    0,
+                    10,
+                  )
+                : null;
+
+            if (
+              dateKey <
+              startDate
+            ) {
+              return false;
+            }
+
+            if (
+              endDate &&
+              dateKey >
+              endDate
+            ) {
+              return false;
+            }
+
+            if (
+              habit.frequency ===
+              HabitFrequency.DAILY
+            ) {
+              return true;
+            }
+
+            const weekdayName =
+              weekdayNames[
+              currentDate
+                .getUTCDay()
+              ];
+
+            return Boolean(
+              habit.customDays
+                ?.includes(
+                  weekdayName,
+                ),
+            );
+          },
+        );
+
+      /*
+       * Un día futuro o sin hábitos
+       * no genera 0%.
+       */
+      if (
+        isFuture ||
+        expectedHabits.length ===
+        0
+      ) {
+        days.push({
+          date:
+            dateKey,
+
+          percentage:
+            null,
+
+          scheduledHabits:
+            expectedHabits.length,
+
+          completedHabits:
+            0,
+
+          isFuture,
+        });
+
+        cursor.setUTCDate(
+          cursor.getUTCDate() +
+          1,
+        );
+
+        continue;
+      }
+
+      let totalProgress =
+        0;
+
+      let completedHabits =
+        0;
+
+      for (
+        const habit of
+        expectedHabits
+      ) {
+        const recordKey =
+          `${String(
+            habit._id,
+          )}|${dateKey}`;
+
+        const record =
+          recordsByHabitAndDate.get(
+            recordKey,
+          );
+
+        let habitProgress =
+          0;
+
+        if (record) {
+          if (
+            record.completed
+          ) {
+            habitProgress =
+              100;
+
+            completedHabits +=
+              1;
+          } else if (
+            record.trackingType ===
+            HabitTrackingType.QUANTITY &&
+            record.targetValue >
+            0
+          ) {
+            habitProgress =
+              Math.min(
+                100,
+                Math.round(
+                  (
+                    record.currentValue /
+                    record.targetValue
+                  ) * 100,
+                ),
+              );
+          }
+        }
+
+        totalProgress +=
+          habitProgress;
+      }
+
+      days.push({
+        date:
+          dateKey,
+
+        percentage:
+          Math.round(
+            totalProgress /
+            expectedHabits.length,
+          ),
+
+        scheduledHabits:
+          expectedHabits.length,
+
+        completedHabits,
+
+        isFuture: false,
+      });
+
+      cursor.setUTCDate(
+        cursor.getUTCDate() +
+        1,
+      );
+    }
+
+    /*
+     * Ahora agrupamos los días del mes
+     * en semanas de calendario.
+     *
+     * Una semana comienza el lunes y
+     * termina el domingo, pero la primera
+     * y última pueden contener menos días
+     * porque se recortan al mes actual.
+     */
+    const points = [];
+
+    let weekNumber =
+      1;
+
+    let weekCursor =
+      new Date(
+        monthStart.getTime(),
+      );
+
+    while (
+      weekCursor.getTime() <=
+      monthEnd.getTime()
+    ) {
+      const weekStart =
+        new Date(
+          weekCursor.getTime(),
+        );
+
+      const weekday =
+        weekStart.getUTCDay() ||
+        7;
+
+      const daysUntilSunday =
+        7 -
+        weekday;
+
+      const naturalWeekEnd =
+        new Date(
+          weekStart.getTime(),
+        );
+
+      naturalWeekEnd.setUTCDate(
+        naturalWeekEnd.getUTCDate() +
+        daysUntilSunday,
+      );
+
+      const weekEnd =
+        naturalWeekEnd.getTime() >
+          monthEnd.getTime()
+          ? new Date(
+            monthEnd.getTime(),
+          )
+          : naturalWeekEnd;
+
+      const weekDays =
+        days.filter(
+          (day) =>
+            day.date >=
+            this.formatCalendarDate(
+              weekStart,
+            ) &&
+            day.date <=
+            this.formatCalendarDate(
+              weekEnd,
+            ),
+        );
+
+      /*
+       * Solamente promediamos días
+       * reales con hábitos aplicables.
+       *
+       * Los días futuros y sin hábitos
+       * tienen percentage = null y se
+       * excluyen.
+       */
+      const measurableDays =
+        weekDays.filter(
+          (day) =>
+            day.percentage !==
+            null,
+        );
+
+      const percentage =
+        measurableDays.length ===
+          0
+          ? null
+          : Math.round(
+            measurableDays.reduce(
+              (
+                total,
+                day,
+              ) =>
+                total +
+                (
+                  day.percentage ??
+                  0
+                ),
+              0,
+            ) /
+            measurableDays.length,
+          );
+
+      const scheduledHabits =
+        weekDays.reduce(
+          (
+            total,
+            day,
+          ) =>
+            total +
+            day.scheduledHabits,
+          0,
+        );
+
+      const completedHabits =
+        weekDays.reduce(
+          (
+            total,
+            day,
+          ) =>
+            total +
+            day.completedHabits,
+          0,
+        );
+
+      const isFuture =
+        weekStart.getTime() >
+        today.getTime();
+
+      points.push({
+        label:
+          `Sem ${weekNumber}`,
+
+        percentage,
+
+        weekStart:
+          this.formatCalendarDate(
+            weekStart,
+          ),
+
+        weekEnd:
+          this.formatCalendarDate(
+            weekEnd,
+          ),
+
+        scheduledHabits,
+
+        completedHabits,
+
+        isFuture,
+      });
+
+      weekNumber +=
+        1;
+
+      weekCursor =
+        new Date(
+          weekEnd.getTime(),
+        );
+
+      weekCursor.setUTCDate(
+        weekCursor.getUTCDate() +
+        1,
+      );
+    }
+
+    return {
+      month:
+        monthKey,
+
+      monthStart:
+        this.formatCalendarDate(
+          monthStart,
+        ),
+
+      monthEnd:
+        this.formatCalendarDate(
+          monthEnd,
+        ),
+
+      points,
+    };
+  }
   async getHabitHistory(
     habitId: string,
     userId: string,

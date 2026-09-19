@@ -41,13 +41,7 @@ export class HabitRecordsController {
   ) {}
 
   /*
-   * Racha diaria global del usuario.
-   *
-   * {
-   *   hasDailyHabits: true,
-   *   currentStreak: 4,
-   *   bestStreak: 7
-   * }
+   * Racha diaria global.
    */
   @Get('streaks/daily')
   getDailyStreak(
@@ -62,22 +56,7 @@ export class HabitRecordsController {
   }
 
   /*
-   * Racha semanal global del usuario.
-   *
-   * {
-   *   hasWeeklyHabits: true,
-   *   currentStreak: 3,
-   *   bestStreak: 5
-   * }
-   *
-   * Si nunca ha creado hábitos
-   * semanales:
-   *
-   * {
-   *   hasWeeklyHabits: false,
-   *   currentStreak: 0,
-   *   bestStreak: 0
-   * }
+   * Racha semanal global.
    */
   @Get('streaks/weekly')
   getWeeklyStreak(
@@ -94,16 +73,8 @@ export class HabitRecordsController {
   /*
    * Progreso de la semana actual.
    *
-   * Devuelve el porcentaje de
-   * cumplimiento por cada día:
-   *
    * Lun - Mar - Mié - Jue -
    * Vie - Sáb - Dom
-   *
-   * Participan hábitos:
-   * - DAILY
-   * - CUSTOM cuando corresponden
-   *   al día seleccionado
    */
   @Get('progress/weekly')
   getWeeklyProgress(
@@ -112,6 +83,30 @@ export class HabitRecordsController {
   ) {
     return this.habitRecordsService
       .getWeeklyProgress(
+        request.user.id,
+        request.user.timezone,
+      );
+  }
+
+  /*
+   * Progreso del mes actual.
+   *
+   * Devuelve la tendencia agrupada
+   * por semanas:
+   *
+   * Sem 1
+   * Sem 2
+   * Sem 3
+   * Sem 4
+   * Sem 5, si corresponde
+   */
+  @Get('progress/monthly')
+  getMonthlyProgress(
+    @Req()
+    request: AuthenticatedRequest,
+  ) {
+    return this.habitRecordsService
+      .getMonthlyProgress(
         request.user.id,
         request.user.timezone,
       );
@@ -169,7 +164,7 @@ export class HabitRecordsController {
 
   /*
    * Historial de períodos
-   * del hábito.
+   * de un hábito.
    */
   @Get(':habitId/history')
   getHistory(
