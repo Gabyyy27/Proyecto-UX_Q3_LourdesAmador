@@ -268,7 +268,148 @@ function getFrequencyLabel(
             return frequency;
     }
 }
+const WEEKDAY_ORDER = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+] as const;
 
+type WeekdayName =
+    (typeof WEEKDAY_ORDER)[number];
+
+const WEEKDAY_SHORT_LABELS:
+    Record<WeekdayName, string> = {
+    monday: "Lun",
+    tuesday: "Mar",
+    wednesday: "Mié",
+    thursday: "Jue",
+    friday: "Vie",
+    saturday: "Sáb",
+    sunday: "Dom",
+};
+
+const WEEKDAY_LONG_LABELS:
+    Record<WeekdayName, string> = {
+    monday: "lunes",
+    tuesday: "martes",
+    wednesday: "miércoles",
+    thursday: "jueves",
+    friday: "viernes",
+    saturday: "sábado",
+    sunday: "domingo",
+};
+
+function getCurrentWeekday(
+    timeZone: string
+): WeekdayName {
+    const weekday =
+        new Intl.DateTimeFormat(
+            "en-US",
+            {
+                timeZone,
+                weekday: "long",
+            }
+        )
+            .format(new Date())
+            .toLowerCase();
+
+    if (
+        WEEKDAY_ORDER.includes(
+            weekday as WeekdayName
+        )
+    ) {
+        return weekday as WeekdayName;
+    }
+
+    return "monday";
+}
+
+function getCustomScheduleInfo(
+    habit: Habit
+) {
+    if (
+        habit.frequency !== "custom"
+    ) {
+        return {
+            isScheduledToday: true,
+            daysLabel: "",
+            nextDayLabel: "",
+        };
+    }
+
+    const selectedDays =
+        habit.customDays ?? [];
+
+    const currentWeekday =
+        getCurrentWeekday(
+            TRACKING_TIMEZONE
+        );
+
+    const isScheduledToday =
+        selectedDays.includes(
+            currentWeekday
+        );
+
+    const daysLabel =
+        WEEKDAY_ORDER
+            .filter((day) =>
+                selectedDays.includes(
+                    day
+                )
+            )
+            .map(
+                (day) =>
+                    WEEKDAY_SHORT_LABELS[
+                    day
+                    ]
+            )
+            .join(" · ");
+
+    const currentIndex =
+        WEEKDAY_ORDER.indexOf(
+            currentWeekday
+        );
+
+    let nextDayLabel = "";
+
+    for (
+        let offset = 1;
+        offset <= 7;
+        offset += 1
+    ) {
+        const nextDay =
+            WEEKDAY_ORDER[
+            (
+                currentIndex +
+                offset
+            ) %
+            WEEKDAY_ORDER.length
+            ];
+
+        if (
+            selectedDays.includes(
+                nextDay
+            )
+        ) {
+            nextDayLabel =
+                WEEKDAY_LONG_LABELS[
+                nextDay
+                ];
+
+            break;
+        }
+    }
+
+    return {
+        isScheduledToday,
+        daysLabel,
+        nextDayLabel,
+    };
+}
 function getPeriodLabel(
     record: HabitRecord
 ) {
@@ -529,12 +670,55 @@ export function HabitTrackingDialog({
             parsedAmount
         ) &&
         parsedAmount > 0;
+    const customSchedule =
+        getCustomScheduleInfo(
+            habit
+        );
+
+    const scheduledToday =
+        customSchedule
+            .isScheduledToday;
+
+    const isCustomHabit =
+        habit.frequency ===
+        "custom";
+
+    const registrationDisabled =
+        !scheduledToday ||
+        completed ||
+        saving;
+
+    const statusLabel =
+        !scheduledToday
+            ? "No programado hoy"
+            : completed
+                ? "Completado"
+                : "Pendiente";
+
+    const statusColor:
+        | "default"
+        | "success"
+        | "warning" =
+        !scheduledToday
+            ? "default"
+            : completed
+                ? "success"
+                : "warning";
 
     async function handleComplete() {
         if (!habit) {
             return;
         }
+        if (!scheduledToday) {
+            enqueueSnackbar(
+                "Este hábito solo se puede completar los días asignados.",
+                {
+                    variant: "info",
+                }
+            );
 
+            return;
+        }
         try {
             setSaving(true);
 
@@ -567,13 +751,24 @@ export function HabitTrackingDialog({
     }
 
     async function handleAddProgress() {
-        if (
-            !habit ||
-            !validAmount
-        ) {
+        if (!habit) {
             return;
         }
 
+        if (!scheduledToday) {
+            enqueueSnackbar(
+                "Este hábito solo permite registrar progreso los días asignados.",
+                {
+                    variant: "info",
+                }
+            );
+
+            return;
+        }
+
+        if (!validAmount) {
+            return;
+        }
         try {
             setSaving(true);
 
@@ -702,54 +897,89 @@ export function HabitTrackingDialog({
                     </Box>
                 ) : (
                     <Stack spacing={3}>
-                       <Stack
-  direction="row"
-  spacing={1}
-  sx={{
-    width: "100%",
-    justifyContent: "space-between",
-    alignItems: "center",
-  }}
->
-  <Typography
-    variant="body1"
-    sx={{
-      fontWeight: 600,
-      minWidth: 0,
-    }}
-  >
-    Frecuencia:{" "}
-    <Box
-      component="span"
-      sx={{
-        fontWeight: 700,
-      }}
-    >
-      {getFrequencyLabel(
-        habit.frequency
-      )}
-    </Box>
-  </Typography>
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{
+                                width: "100%",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                            }}
+                        >
+                            <Typography
+                                variant="body1"
+                                sx={{
+                                    fontWeight: 600,
+                                    minWidth: 0,
+                                }}
+                            >
+                                Frecuencia:{" "}
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    {getFrequencyLabel(
+                                        habit.frequency
+                                    )}
+                                </Box>
+                            </Typography>
 
-  <Chip
-    label={
-      completed
-        ? "Completado"
-        : "Pendiente"
-    }
-    color={
-      completed
-        ? "success"
-        : "warning"
-    }
-    variant="outlined"
-    size="small"
-    sx={{
-      flexShrink: 0,
-    }}
-  />
-</Stack>
+                            <Chip
+                                label={statusLabel}
+                                color={statusColor}
+                                variant="outlined"
+                                size="small"
+                                sx={{
+                                    flexShrink: 0,
+                                }}
+                            />
+                        </Stack>
+                        {isCustomHabit ? (
+                            <Stack spacing={0.75}>
+                                <Typography
+                                    variant="body2"
+                                >
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Días:
+                                    </Box>{" "}
+                                    {customSchedule.daysLabel ||
+                                        "Sin días asignados"}
+                                </Typography>
 
+                                {!scheduledToday ? (
+                                    <Box
+                                        sx={{
+                                            p: 1.5,
+                                            borderRadius: 2,
+                                            bgcolor: "action.hover",
+                                        }}
+                                    >
+
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{
+                                                mt: 0.25,
+                                            }}
+                                        >
+                                            Solo puedes registrar
+                                            seguimiento los días
+                                            asignados.
+                                            {customSchedule.nextDayLabel
+                                                ? ` Próximo día: ${customSchedule.nextDayLabel}.`
+                                                : ""}
+                                        </Typography>
+                                    </Box>
+                                ) : null}
+                            </Stack>
+                        ) : null}
                         {trackingType ===
                             "quantity" ? (
                             <Stack spacing={2}>
@@ -880,7 +1110,7 @@ export function HabitTrackingDialog({
                                 >
                                     {completed
                                         ? "Este hábito ya fue completado en la frecuencia actual."
-                                        : "Marca el hábito como completado cuando lo hayas realizado."}
+                                        : " "}
                                 </Typography>
 
                                 <Button
@@ -889,8 +1119,7 @@ export function HabitTrackingDialog({
                                         <CheckCircleOutlinedIcon />
                                     }
                                     disabled={
-                                        completed ||
-                                        saving
+                                        registrationDisabled
                                     }
                                     onClick={() =>
                                         void handleComplete()
@@ -904,9 +1133,11 @@ export function HabitTrackingDialog({
                                 >
                                     {saving
                                         ? "Guardando..."
-                                        : completed
-                                            ? "Completado"
-                                            : "Marcar completado"}
+                                        : !scheduledToday
+                                            ? "No disponible hoy"
+                                            : completed
+                                                ? "Completado"
+                                                : "Marcar completado"}
                                 </Button>
                             </Stack>
                         )}

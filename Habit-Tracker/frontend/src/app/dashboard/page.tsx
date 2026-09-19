@@ -1,16 +1,13 @@
 "use client";
 
 import {
-
   Box,
-
   Card,
   CardContent,
   Chip,
   CircularProgress,
   LinearProgress,
   Stack,
-
   Typography,
 } from "@mui/material";
 
@@ -25,8 +22,13 @@ import {
 } from "notistack";
 
 import { StatCard } from "@/components/dashboard/StatCard";
+import { StreakCard } from "@/components/dashboard/StreakCard";
 
-import { getHabitHistory } from "@/services/habit-records.service";
+import {
+  getDailyStreak,
+  getHabitHistory,
+  getWeeklyStreak,
+} from "@/services/habit-records.service";
 
 import {
   getHabits,
@@ -148,8 +150,8 @@ function getIsoWeek(
 
   workingDate.setUTCDate(
     workingDate.getUTCDate() +
-    4 -
-    weekday
+      4 -
+      weekday
   );
 
   const isoYear =
@@ -171,7 +173,7 @@ function getIsoWeek(
           workingDate.getTime() -
           yearStart.getTime()
         ) /
-        86400000 +
+          86400000 +
         1
       ) / 7
     );
@@ -286,10 +288,10 @@ function isHabitAvailableToday(
   if (
     habit.endDate &&
     today >
-    habit.endDate.slice(
-      0,
-      10
-    )
+      habit.endDate.slice(
+        0,
+        10
+      )
   ) {
     return false;
   }
@@ -378,9 +380,23 @@ export default function DashboardPage() {
       try {
         setLoading(true);
 
-
-        const habits =
-          await getHabits();
+        /*
+         * Cargamos en paralelo:
+         *
+         * - hábitos
+         * - racha diaria
+         * - racha semanal
+         */
+        const [
+          habits,
+          dailyStreak,
+          weeklyStreak,
+        ] =
+          await Promise.all([
+            getHabits(),
+            getDailyStreak(),
+            getWeeklyStreak(),
+          ]);
 
         const activeHabits =
           habits.filter(
@@ -424,9 +440,8 @@ export default function DashboardPage() {
                   );
 
                 /*
-                 * Primero buscamos el
-                 * registro con la nueva
-                 * clave de período.
+                 * Primero usamos la
+                 * nueva clave de período.
                  */
                 let currentRecord =
                   history.find(
@@ -436,21 +451,17 @@ export default function DashboardPage() {
                   );
 
                 /*
-                 * Compatibilidad con los
-                 * registros antiguos.
-                 *
-                 * Solo aplicamos el
-                 * dateKey YYYY-MM-DD a
-                 * frecuencias que realmente
-                 * trabajan por día.
+                 * Compatibilidad con
+                 * registros antiguos
+                 * YYYY-MM-DD.
                  */
                 if (
                   !currentRecord &&
                   (
                     habit.frequency ===
-                    "daily" ||
+                      "daily" ||
                     habit.frequency ===
-                    "custom"
+                      "custom"
                   )
                 ) {
                   currentRecord =
@@ -470,10 +481,10 @@ export default function DashboardPage() {
                     ?.targetValue ??
                   (
                     trackingType ===
-                      "binary"
+                    "binary"
                       ? 1
                       : habit.targetValue ??
-                      1
+                        1
                   );
 
                 const currentValue =
@@ -495,36 +506,30 @@ export default function DashboardPage() {
                   periodCompleted
                     ? 100
                     : getProgressPercent(
-                      currentValue,
-                      targetValue
-                    );
+                        currentValue,
+                        targetValue
+                      );
 
                 const completedAt =
                   currentRecord
                     ?.completedAt;
 
                 /*
-                 * "Completados hoy" cuenta
-                 * solamente los hábitos que
-                 * efectivamente fueron
-                 * completados hoy.
-                 *
-                 * Un hábito semanal que se
-                 * completó ayer sigue
-                 * completado esta semana,
-                 * pero no cuenta como
-                 * completado hoy.
+                 * "Completados hoy"
+                 * solamente cuenta
+                 * finalizaciones que
+                 * ocurrieron hoy.
                  */
                 const completedToday =
                   Boolean(
                     periodCompleted &&
-                    completedAt &&
-                    getDateKey(
-                      new Date(
-                        completedAt
-                      ),
-                      DASHBOARD_TIMEZONE
-                    ) === today
+                      completedAt &&
+                      getDateKey(
+                        new Date(
+                          completedAt
+                        ),
+                        DASHBOARD_TIMEZONE
+                      ) === today
                   );
 
                 return {
@@ -559,23 +564,23 @@ export default function DashboardPage() {
 
         const dailyProgress =
           habitsWithStatus.length ===
-            0
+          0
             ? 0
             : Math.round(
-              habitsWithStatus.reduce(
-                (
-                  total,
-                  habit
-                ) =>
-                  total +
+                habitsWithStatus.reduce(
                   (
-                    habit.progressPercent ??
-                    0
-                  ),
-                0
-              ) /
-              habitsWithStatus.length
-            );
+                    total,
+                    habit
+                  ) =>
+                    total +
+                    (
+                      habit.progressPercent ??
+                      0
+                    ),
+                  0
+                ) /
+                  habitsWithStatus.length
+              );
 
         setData({
           activeHabits:
@@ -587,6 +592,10 @@ export default function DashboardPage() {
 
           todayHabits:
             habitsWithStatus,
+
+          dailyStreak,
+
+          weeklyStreak,
         });
       } catch (loadError) {
         enqueueSnackbar(
@@ -605,7 +614,6 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
-
 
   if (
     loading &&
@@ -651,16 +659,19 @@ export default function DashboardPage() {
         </Typography>
       </Box>
 
+      {/*
+       * MÉTRICAS PRINCIPALES
+       */}
       <Box
         sx={{
           display: "grid",
 
           gridTemplateColumns:
-          {
-            xs: "1fr",
-            sm: "repeat(2, 1fr)",
-            lg: "repeat(3, 1fr)",
-          },
+            {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              lg: "repeat(3, 1fr)",
+            },
 
           gap: 2,
         }}
@@ -683,12 +694,127 @@ export default function DashboardPage() {
 
         <StatCard
           label="Cumplimiento actual"
-          value={`${data?.dailyProgress ??
+          value={`${
+            data?.dailyProgress ??
             0
-            }%`}
+          }%`}
         />
       </Box>
 
+      {/*
+       * RACHAS
+       */}
+      <Stack spacing={1.5}>
+        <Box>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
+            Rachas
+          </Typography>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Mantén tus hábitos para
+            aumentar tus rachas.
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+
+            gridTemplateColumns:
+              {
+                xs: "1fr",
+                sm:
+                  "repeat(2, 1fr)",
+                lg:
+                  data?.weeklyStreak
+                    .hasWeeklyHabits
+                    ? "repeat(4, 1fr)"
+                    : "repeat(2, 1fr)",
+              },
+
+            gap: 2,
+          }}
+        >
+          <StreakCard
+            label="Racha diaria"
+            value={
+              data?.dailyStreak
+                .currentStreak ??
+              0
+            }
+            unit={
+              data?.dailyStreak
+                .currentStreak ===
+              1
+                ? "día"
+                : "días"
+            }
+          />
+
+          <StreakCard
+            label="Mejor racha diaria"
+            value={
+              data?.dailyStreak
+                .bestStreak ??
+              0
+            }
+            unit={
+              data?.dailyStreak
+                .bestStreak ===
+              1
+                ? "día"
+                : "días"
+            }
+          />
+
+          {data?.weeklyStreak
+            .hasWeeklyHabits ? (
+            <>
+              <StreakCard
+                label="Racha semanal"
+                value={
+                  data.weeklyStreak
+                    .currentStreak
+                }
+                unit={
+                  data.weeklyStreak
+                    .currentStreak ===
+                  1
+                    ? "semana"
+                    : "semanas"
+                }
+              />
+
+              <StreakCard
+                label="Mejor racha semanal"
+                value={
+                  data.weeklyStreak
+                    .bestStreak
+                }
+                unit={
+                  data.weeklyStreak
+                    .bestStreak ===
+                  1
+                    ? "semana"
+                    : "semanas"
+                }
+              />
+            </>
+          ) : null}
+        </Box>
+      </Stack>
+
+      {/*
+       * CUMPLIMIENTO
+       */}
       <Card
         variant="outlined"
       >
@@ -699,6 +825,7 @@ export default function DashboardPage() {
               sx={{
                 justifyContent:
                   "space-between",
+
                 alignItems:
                   "center",
               }}
@@ -722,6 +849,8 @@ export default function DashboardPage() {
               <Typography
                 sx={{
                   fontWeight: 700,
+                  flexShrink: 0,
+                  ml: 2,
                 }}
               >
                 {data?.dailyProgress ??
@@ -745,6 +874,9 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/*
+       * RESUMEN DE HÁBITOS
+       */}
       <Card
         variant="outlined"
       >
@@ -767,8 +899,9 @@ export default function DashboardPage() {
               </Typography>
             </Box>
 
-            {data?.todayHabits
-              .length === 0 ? (
+            {(data?.todayHabits
+              .length ?? 0) ===
+            0 ? (
               <Box
                 sx={{
                   py: 5,
@@ -827,19 +960,27 @@ export default function DashboardPage() {
                             "divider",
 
                           "&:last-child":
-                          {
-                            borderBottom:
-                              "none",
-                          },
+                            {
+                              borderBottom:
+                                "none",
+                            },
                         }}
                       >
+                        {/*
+                         * Pill siempre a la
+                         * derecha, también
+                         * en móvil.
+                         */}
                         <Stack
                           direction="row"
                           spacing={1.5}
                           sx={{
-                            width: "100%",
+                            width:
+                              "100%",
+
                             justifyContent:
                               "space-between",
+
                             alignItems:
                               "flex-start",
                           }}
@@ -853,12 +994,16 @@ export default function DashboardPage() {
                           >
                             <Typography
                               sx={{
-                                fontWeight: 600,
+                                fontWeight:
+                                  600,
+
                                 wordBreak:
                                   "break-word",
                               }}
                             >
-                              {habit.name}
+                              {
+                                habit.name
+                              }
                             </Typography>
 
                             <Typography
@@ -892,15 +1037,21 @@ export default function DashboardPage() {
                         </Stack>
 
                         {habit.trackingType ===
-                          "quantity" ? (
+                        "quantity" ? (
                           <Stack
                             spacing={0.75}
+                            sx={{
+                              mt: 1.5,
+                            }}
                           >
                             <Stack
                               direction="row"
                               sx={{
                                 justifyContent:
                                   "space-between",
+
+                                alignItems:
+                                  "center",
                               }}
                             >
                               <Typography
@@ -920,6 +1071,11 @@ export default function DashboardPage() {
                                 sx={{
                                   fontWeight:
                                     600,
+
+                                  flexShrink:
+                                    0,
+
+                                  ml: 2,
                                 }}
                               >
                                 {
@@ -936,15 +1092,19 @@ export default function DashboardPage() {
                               }
                               sx={{
                                 height: 6,
+
                                 borderRadius:
                                   999,
                               }}
                             />
                           </Stack>
-                                               ) : (
+                        ) : (
                           <Typography
                             variant="body2"
                             color="text.secondary"
+                            sx={{
+                              mt: 1.5,
+                            }}
                           >
                             {completed
                               ? "Objetivo cumplido en el período actual."

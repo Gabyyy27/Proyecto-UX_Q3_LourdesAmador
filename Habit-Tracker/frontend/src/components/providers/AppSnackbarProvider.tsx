@@ -18,7 +18,7 @@ export function AppSnackbarProvider({
   return (
     <SnackbarProvider
       maxSnack={3}
-      autoHideDuration={3500}
+      autoHideDuration={1200}
       preventDuplicate
       anchorOrigin={{
         vertical: "top",

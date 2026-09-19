@@ -73,6 +73,22 @@ export type AddProgressResponse = {
   entry: HabitProgressEntry;
 };
 
+export type DailyStreakResponse = {
+  hasDailyHabits: boolean;
+
+  currentStreak: number;
+
+  bestStreak: number;
+};
+
+export type WeeklyStreakResponse = {
+  hasWeeklyHabits: boolean;
+
+  currentStreak: number;
+
+  bestStreak: number;
+};
+
 export async function completeHabit(
   habitId: string
 ): Promise<CompleteHabitResponse> {
@@ -105,6 +121,24 @@ export async function getHabitHistory(
   const response =
     await api.get<HabitRecord[]>(
       `/habits/${habitId}/history`
+    );
+
+  return response.data;
+}
+
+export async function getDailyStreak(): Promise<DailyStreakResponse> {
+  const response =
+    await api.get<DailyStreakResponse>(
+      "/habits/streaks/daily"
+    );
+
+  return response.data;
+}
+
+export async function getWeeklyStreak(): Promise<WeeklyStreakResponse> {
+  const response =
+    await api.get<WeeklyStreakResponse>(
+      "/habits/streaks/weekly"
     );
 
   return response.data;
