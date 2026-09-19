@@ -2200,6 +2200,505 @@ export class HabitRecordsService {
       bestStreak,
     };
   }
+    /*
+   * PROGRESO SEMANAL
+   *
+   * Representa el cumplimiento diario
+   * de la semana calendario actual:
+   *
+   * Lun - Mar - Mié - Jue - Vie - Sáb - Dom
+   *
+   * Participan:
+   * - hábitos DAILY
+   * - hábitos CUSTOM únicamente en los
+   *   días que tengan programados
+   *
+   * Los hábitos WEEKLY no se mezclan
+   * aquí porque poseen un período
+   * semanal propio.
+   */
+  async getWeeklyProgress(
+    userId: string,
+    timezone: string,
+  ) {
+    const safeTimezone =
+      this.validateTimezone(
+        timezone,
+      );
+
+    const habits =
+      await this.habitsService
+        .findAll(
+          userId,
+        );
+
+    /*
+     * Debido a que actualmente no
+     * guardamos historial de activación
+     * y desactivación, trabajamos con
+     * los hábitos activos actuales.
+     */
+    const trackableHabits =
+      habits.filter(
+        (habit) =>
+          habit.active &&
+          (
+            habit.frequency ===
+              HabitFrequency.DAILY ||
+            habit.frequency ===
+              HabitFrequency.CUSTOM
+          ),
+      );
+
+    const today =
+      this.getCalendarDate(
+        new Date(),
+        safeTimezone,
+      );
+
+    /*
+     * Calculamos el lunes de la
+     * semana actual.
+     */
+    const weekday =
+      today.getUTCDay() ||
+      7;
+
+    const weekStart =
+      new Date(
+        today.getTime(),
+      );
+
+    weekStart.setUTCDate(
+      weekStart.getUTCDate() -
+        weekday +
+        1,
+    );
+
+    const weekEnd =
+      new Date(
+        weekStart.getTime(),
+      );
+
+    weekEnd.setUTCDate(
+      weekEnd.getUTCDate() +
+        6,
+    );
+
+    const dayLabels = [
+      'Lun',
+      'Mar',
+      'Mié',
+      'Jue',
+      'Vie',
+      'Sáb',
+      'Dom',
+    ];
+
+    const weekdayNames = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
+
+    /*
+     * Construimos las claves posibles
+     * de los siete días.
+     *
+     * Incluimos:
+     * - daily:YYYY-MM-DD
+     * - custom:YYYY-MM-DD
+     * - YYYY-MM-DD para compatibilidad
+     *   con registros antiguos.
+     */
+    const acceptedDateKeys:
+      string[] = [];
+
+    for (
+      let index = 0;
+      index < 7;
+      index += 1
+    ) {
+      const date =
+        new Date(
+          weekStart.getTime(),
+        );
+
+      date.setUTCDate(
+        date.getUTCDate() +
+          index,
+      );
+
+      const dateKey =
+        this.formatCalendarDate(
+          date,
+        );
+
+      acceptedDateKeys.push(
+        `daily:${dateKey}`,
+        `custom:${dateKey}`,
+        dateKey,
+      );
+    }
+
+    const habitIds =
+      trackableHabits.map(
+        (habit) =>
+          new Types.ObjectId(
+            String(
+              habit._id,
+            ),
+          ),
+      );
+
+    /*
+     * Si no existen hábitos diarios
+     * o personalizados activos no hace
+     * falta consultar MongoDB.
+     */
+    const records =
+      habitIds.length === 0
+        ? []
+        : await this.habitRecordModel
+            .find({
+              userId:
+                new Types.ObjectId(
+                  userId,
+                ),
+
+              habitId: {
+                $in:
+                  habitIds,
+              },
+
+              dateKey: {
+                $in:
+                  acceptedDateKeys,
+              },
+            });
+
+    /*
+     * Índice:
+     *
+     * habitId|YYYY-MM-DD -> HabitRecord
+     */
+    const recordsByHabitAndDate =
+      new Map<
+        string,
+        HabitRecordDocument
+      >();
+
+    for (
+      const record of records
+    ) {
+      let calendarDateKey:
+        | string
+        | null = null;
+
+      if (
+        record.dateKey?.startsWith(
+          'daily:',
+        )
+      ) {
+        calendarDateKey =
+          record.dateKey.replace(
+            'daily:',
+            '',
+          );
+      } else if (
+        record.dateKey?.startsWith(
+          'custom:',
+        )
+      ) {
+        calendarDateKey =
+          record.dateKey.replace(
+            'custom:',
+            '',
+          );
+      } else if (
+        /^\d{4}-\d{2}-\d{2}$/.test(
+          record.dateKey ?? '',
+        )
+      ) {
+        calendarDateKey =
+          record.dateKey;
+      }
+
+      if (
+        !calendarDateKey
+      ) {
+        continue;
+      }
+
+      const mapKey =
+        `${String(
+          record.habitId,
+        )}|${calendarDateKey}`;
+
+      /*
+       * Si existiera un registro antiguo
+       * y uno nuevo para la misma fecha,
+       * damos prioridad al formato nuevo.
+       */
+      const existing =
+        recordsByHabitAndDate.get(
+          mapKey,
+        );
+
+      if (
+        !existing ||
+        record.dateKey.includes(
+          ':',
+        )
+      ) {
+        recordsByHabitAndDate.set(
+          mapKey,
+          record,
+        );
+      }
+    }
+
+    const points = [];
+
+    for (
+      let index = 0;
+      index < 7;
+      index += 1
+    ) {
+      const date =
+        new Date(
+          weekStart.getTime(),
+        );
+
+      date.setUTCDate(
+        date.getUTCDate() +
+          index,
+      );
+
+      const dateKey =
+        this.formatCalendarDate(
+          date,
+        );
+
+      const isFuture =
+        date.getTime() >
+        today.getTime();
+
+      /*
+       * Seleccionamos solamente los
+       * hábitos que corresponden a
+       * este día concreto.
+       */
+      const expectedHabits =
+        trackableHabits.filter(
+          (habit) => {
+            const startDate =
+              habit.startDate
+                .toISOString()
+                .slice(
+                  0,
+                  10,
+                );
+
+            const endDate =
+              habit.endDate
+                ? habit.endDate
+                    .toISOString()
+                    .slice(
+                      0,
+                      10,
+                    )
+                : null;
+
+            if (
+              dateKey <
+              startDate
+            ) {
+              return false;
+            }
+
+            if (
+              endDate &&
+              dateKey >
+                endDate
+            ) {
+              return false;
+            }
+
+            /*
+             * DAILY corresponde todos
+             * los días dentro de sus
+             * fechas.
+             */
+            if (
+              habit.frequency ===
+              HabitFrequency.DAILY
+            ) {
+              return true;
+            }
+
+            /*
+             * CUSTOM solamente aparece
+             * si ese weekday fue
+             * seleccionado.
+             */
+            const weekdayName =
+              weekdayNames[
+                index
+              ];
+
+            return Boolean(
+              habit.customDays
+                ?.includes(
+                  weekdayName,
+                ),
+            );
+          },
+        );
+
+      /*
+       * Un día futuro todavía no debe
+       * aparecer como incumplimiento.
+       *
+       * Tampoco inventamos 0% cuando
+       * no existe ningún hábito.
+       */
+      if (
+        isFuture ||
+        expectedHabits.length ===
+          0
+      ) {
+        points.push({
+          date:
+            dateKey,
+
+          label:
+            dayLabels[
+              index
+            ],
+
+          percentage:
+            null,
+
+          scheduledHabits:
+            expectedHabits.length,
+
+          completedHabits:
+            0,
+
+          isToday:
+            date.getTime() ===
+            today.getTime(),
+
+          isFuture,
+        });
+
+        continue;
+      }
+
+      let totalProgress =
+        0;
+
+      let completedHabits =
+        0;
+
+      for (
+        const habit of
+        expectedHabits
+      ) {
+        const recordKey =
+          `${String(
+            habit._id,
+          )}|${dateKey}`;
+
+        const record =
+          recordsByHabitAndDate.get(
+            recordKey,
+          );
+
+        let habitProgress =
+          0;
+
+        if (record) {
+          if (
+            record.completed
+          ) {
+            habitProgress =
+              100;
+
+            completedHabits +=
+              1;
+          } else if (
+            record.trackingType ===
+              HabitTrackingType.QUANTITY &&
+            record.targetValue >
+              0
+          ) {
+            habitProgress =
+              Math.min(
+                100,
+                Math.round(
+                  (
+                    record.currentValue /
+                    record.targetValue
+                  ) * 100,
+                ),
+              );
+          }
+        }
+
+        totalProgress +=
+          habitProgress;
+      }
+
+      const percentage =
+        Math.round(
+          totalProgress /
+            expectedHabits.length,
+        );
+
+      points.push({
+        date:
+          dateKey,
+
+        label:
+          dayLabels[
+            index
+          ],
+
+        percentage,
+
+        scheduledHabits:
+          expectedHabits.length,
+
+        completedHabits,
+
+        isToday:
+          date.getTime() ===
+          today.getTime(),
+
+        isFuture: false,
+      });
+    }
+
+    return {
+      weekStart:
+        this.formatCalendarDate(
+          weekStart,
+        ),
+
+      weekEnd:
+        this.formatCalendarDate(
+          weekEnd,
+        ),
+
+      points,
+    };
+  }
   
   async getHabitHistory(
     habitId: string,

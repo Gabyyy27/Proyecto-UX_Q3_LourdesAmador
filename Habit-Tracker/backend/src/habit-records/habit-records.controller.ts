@@ -92,6 +92,32 @@ export class HabitRecordsController {
   }
 
   /*
+   * Progreso de la semana actual.
+   *
+   * Devuelve el porcentaje de
+   * cumplimiento por cada día:
+   *
+   * Lun - Mar - Mié - Jue -
+   * Vie - Sáb - Dom
+   *
+   * Participan hábitos:
+   * - DAILY
+   * - CUSTOM cuando corresponden
+   *   al día seleccionado
+   */
+  @Get('progress/weekly')
+  getWeeklyProgress(
+    @Req()
+    request: AuthenticatedRequest,
+  ) {
+    return this.habitRecordsService
+      .getWeeklyProgress(
+        request.user.id,
+        request.user.timezone,
+      );
+  }
+
+  /*
    * Completa hábitos binarios.
    *
    * Ejemplo:
