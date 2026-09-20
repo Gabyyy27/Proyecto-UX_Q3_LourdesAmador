@@ -3261,27 +3261,35 @@ export class HabitRecordsService {
             measurableDays.length,
           );
 
-      const scheduledHabits =
-        weekDays.reduce(
-          (
-            total,
-            day,
-          ) =>
-            total +
-            day.scheduledHabits,
-          0,
-        );
+      /*
+ * La metadata debe utilizar exactamente
+ * los mismos días que participan en el
+ * cálculo del porcentaje.
+ *
+ * Así evitamos contar hábitos de días
+ * futuros dentro de la semana actual.
+ */
+const scheduledHabits =
+  measurableDays.reduce(
+    (
+      total,
+      day,
+    ) =>
+      total +
+      day.scheduledHabits,
+    0,
+  );
 
-      const completedHabits =
-        weekDays.reduce(
-          (
-            total,
-            day,
-          ) =>
-            total +
-            day.completedHabits,
-          0,
-        );
+const completedHabits =
+  measurableDays.reduce(
+    (
+      total,
+      day,
+    ) =>
+      total +
+      day.completedHabits,
+    0,
+  );
 
       const isFuture =
         weekStart.getTime() >
