@@ -22,6 +22,14 @@ export type Habit = {
 
   category: string;
 
+  /*
+   * Es opcional temporalmente porque
+   * los hábitos creados antes de agregar
+   * esta propiedad pueden no tenerla
+   * guardada todavía en MongoDB.
+   */
+  icon?: string;
+
   frequency: HabitFrequency;
 
   customDays: string[];
@@ -54,6 +62,15 @@ export type HabitFormData = {
 
   category: string;
 
+  /*
+   * En el formulario siempre tendremos
+   * un ícono seleccionado.
+   *
+   * Si el usuario no cambia nada,
+   * utilizaremos "task_alt".
+   */
+  icon: string;
+
   frequency: HabitFrequency;
 
   customDays: string[];
@@ -77,6 +94,13 @@ export type CreateHabitData = {
   description?: string;
 
   category?: string;
+
+  /*
+   * Es opcional para que el backend
+   * pueda aplicar "task_alt" como
+   * valor predeterminado si no llega.
+   */
+  icon?: string;
 
   frequency: HabitFrequency;
 

@@ -40,6 +40,13 @@ import {
   updateHabit,
 } from "@/services/habits.service";
 
+import {
+  HabitIconSelector,
+} from "@/components/habits/HabitIconSelector";
+
+import {
+  DEFAULT_HABIT_ICON,
+} from "@/constants/habit-icons";
 import type {
   Habit,
   HabitFormData,
@@ -98,8 +105,12 @@ function createInitialForm(
       description:
         habit.description ?? "",
 
-      category:
+            category:
         habit.category ?? "",
+
+      icon:
+        habit.icon ??
+        DEFAULT_HABIT_ICON,
 
       frequency:
         habit.frequency,
@@ -150,6 +161,8 @@ function createInitialForm(
     description: "",
 
     category: "",
+
+    icon: DEFAULT_HABIT_ICON,
 
     frequency: "daily",
 
@@ -280,6 +293,26 @@ export function HabitForm({
         );
       }
     };
+  }
+
+  function handleIconChange(
+    icon: string,
+  ) {
+    setForm(
+      (current) => ({
+        ...current,
+        icon,
+      }),
+    );
+
+    if (errors.icon) {
+      setErrors(
+        (current) => ({
+          ...current,
+          icon: undefined,
+        }),
+      );
+    }
   }
 
   function handleTrackingTypeChange(
@@ -464,9 +497,12 @@ export function HabitForm({
         validData.description ||
         undefined,
 
-      category:
+    category:
         validData.category ||
         undefined,
+
+      icon:
+        validData.icon,
 
       frequency:
         validData.frequency,
@@ -612,7 +648,28 @@ export function HabitForm({
               minRows={2}
               fullWidth
             />
+                    <Box>
+              <HabitIconSelector
+                value={form.icon}
+                onChange={
+                  handleIconChange
+                }
+                disabled={loading}
+              />
 
+              {errors.icon ? (
+                <Typography
+                  variant="caption"
+                  color="error"
+                  sx={{
+                    display: "block",
+                    mt: 1,
+                  }}
+                >
+                  {errors.icon}
+                </Typography>
+              ) : null}
+            </Box>
             {/*
              * Tipo de seguimiento
              */}

@@ -6,8 +6,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
   InputAdornment,
   Stack,
@@ -39,17 +37,30 @@ import type {
 } from "@/types/habit";
 
 import {
+  HabitCategoryFilters,
+} from "@/components/habits/HabitCategoryFilters";
+
+import {
   HabitFilters,
   type HabitFilter,
+  type HabitPriorityFilter,
 } from "@/components/habits/HabitFilters";
 
-import { HabitTable } from "@/components/habits/HabitTable";
+import {
+  HabitTable,
+} from "@/components/habits/HabitTable";
 
-import { HabitMobileCard } from "@/components/habits/HabitMobileCard";
+import {
+  HabitMobileCard,
+} from "@/components/habits/HabitMobileCard";
 
-import { DeleteHabitDialog } from "@/components/habits/DeleteHabitDialog";
+import {
+  DeleteHabitDialog,
+} from "@/components/habits/DeleteHabitDialog";
 
-import { HabitTrackingDialog } from "@/components/habits/HabitTrackingDialog";
+import {
+  HabitTrackingDialog,
+} from "@/components/habits/HabitTrackingDialog";
 
 export default function HabitsPage() {
   const {
@@ -75,21 +86,34 @@ export default function HabitsPage() {
     filter,
     setFilter,
   ] = useState<HabitFilter>(
-    "all"
+    "all",
   );
+
+  const [
+    priority,
+    setPriority,
+  ] =
+    useState<HabitPriorityFilter>(
+      "all",
+    );
+
+  const [
+    category,
+    setCategory,
+  ] = useState("all");
 
   const [
     habitToDelete,
     setHabitToDelete,
   ] = useState<Habit | null>(
-    null
+    null,
   );
 
   const [
     habitToTrack,
     setHabitToTrack,
   ] = useState<Habit | null>(
-    null
+    null,
   );
 
   const [
@@ -97,33 +121,108 @@ export default function HabitsPage() {
     setDeleting,
   ] = useState(false);
 
+  /*
+   * Carga inicial de hábitos.
+   */
   const loadHabits =
-    useCallback(async () => {
-      try {
-        setLoading(true);
+    useCallback(
+      async () => {
+        try {
+          setLoading(true);
 
-        const data =
-          await getHabits();
+          const data =
+            await getHabits();
 
-        setHabits(data);
-      } catch (loadError) {
-        enqueueSnackbar(
-          loadError instanceof Error
-            ? loadError.message
-            : "No se pudieron cargar los hábitos",
-          {
-            variant: "error",
-          }
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [enqueueSnackbar]);
+          setHabits(data);
+        } catch (
+          loadError
+        ) {
+          enqueueSnackbar(
+            loadError instanceof
+              Error
+              ? loadError.message
+              : "No se pudieron cargar los hábitos",
+            {
+              variant:
+                "error",
+            },
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
+      [enqueueSnackbar],
+    );
 
   useEffect(() => {
     void loadHabits();
   }, [loadHabits]);
 
+  /*
+   * Categorías disponibles.
+   *
+   * - ignoramos categorías vacías
+   * - quitamos espacios
+   * - evitamos duplicados
+   * - ordenamos alfabéticamente
+   */
+  const categories =
+    useMemo(() => {
+      const uniqueCategories =
+        new Map<
+          string,
+          string
+        >();
+
+      for (
+        const habit of habits
+      ) {
+        const trimmedCategory =
+          (
+            habit.category ??
+            ""
+          ).trim();
+
+        if (
+          !trimmedCategory
+        ) {
+          continue;
+        }
+
+        const normalized =
+          trimmedCategory.toLowerCase();
+
+        if (
+          !uniqueCategories.has(
+            normalized,
+          )
+        ) {
+          uniqueCategories.set(
+            normalized,
+            trimmedCategory,
+          );
+        }
+      }
+
+      return Array.from(
+        uniqueCategories.values(),
+      ).sort(
+        (first, second) =>
+          first.localeCompare(
+            second,
+            "es",
+          ),
+      );
+    }, [habits]);
+
+  /*
+   * Filtrado por:
+   *
+   * - búsqueda
+   * - estado
+   * - prioridad
+   * - categoría
+   */
   const filteredHabits =
     useMemo(() => {
       const normalizedSearch =
@@ -131,22 +230,35 @@ export default function HabitsPage() {
           .trim()
           .toLowerCase();
 
+      const normalizedCategory =
+        category === "all"
+          ? "all"
+          : category
+              .trim()
+              .toLowerCase();
+
       return habits.filter(
         (habit) => {
+          const habitCategory =
+            (
+              habit.category ??
+              ""
+            )
+              .trim()
+              .toLowerCase();
+
           const matchesSearch =
             !normalizedSearch ||
             habit.name
               .toLowerCase()
               .includes(
-                normalizedSearch
+                normalizedSearch,
               ) ||
-            habit.category
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              );
+            habitCategory.includes(
+              normalizedSearch,
+            );
 
-          const matchesFilter =
+          const matchesStatus =
             filter === "all"
               ? true
               : filter ===
@@ -154,25 +266,46 @@ export default function HabitsPage() {
                 ? habit.active
                 : !habit.active;
 
+          const matchesPriority =
+            priority === "all"
+              ? true
+              : habit.priority ===
+                priority;
+
+          const matchesCategory =
+            normalizedCategory ===
+            "all"
+              ? true
+              : habitCategory ===
+                normalizedCategory;
+
           return (
             matchesSearch &&
-            matchesFilter
+            matchesStatus &&
+            matchesPriority &&
+            matchesCategory
           );
-        }
+        },
       );
     }, [
       habits,
       search,
       filter,
+      priority,
+      category,
     ]);
 
+  /*
+   * Activa o desactiva
+   * un hábito.
+   */
   async function handleToggle(
-    habitId: string
+    habitId: string,
   ) {
     try {
       const updated =
         await toggleHabit(
-          habitId
+          habitId,
         );
 
       setHabits(
@@ -182,15 +315,14 @@ export default function HabitsPage() {
               habit._id ===
               updated._id
                 ? updated
-                : habit
-          )
+                : habit,
+          ),
       );
 
       /*
-       * Si el usuario desactiva un
-       * hábito que tenía abierto en
-       * seguimiento, cerramos también
-       * el diálogo.
+       * Si se desactiva un hábito
+       * que está abierto en seguimiento,
+       * cerramos también el diálogo.
        */
       if (
         !updated.active &&
@@ -198,7 +330,7 @@ export default function HabitsPage() {
           updated._id
       ) {
         setHabitToTrack(
-          null
+          null,
         );
       }
 
@@ -207,21 +339,30 @@ export default function HabitsPage() {
           ? "Hábito activado correctamente."
           : "Hábito desactivado correctamente.",
         {
-          variant: "success",
-        }
+          variant:
+            "success",
+        },
       );
-    } catch (toggleError) {
+    } catch (
+      toggleError
+    ) {
       enqueueSnackbar(
-        toggleError instanceof Error
+        toggleError instanceof
+          Error
           ? toggleError.message
           : "No se pudo cambiar el estado del hábito",
         {
-          variant: "error",
-        }
+          variant:
+            "error",
+        },
       );
     }
   }
 
+  /*
+   * Elimina el hábito
+   * seleccionado.
+   */
   async function handleDelete() {
     if (!habitToDelete) {
       return;
@@ -231,7 +372,7 @@ export default function HabitsPage() {
       setDeleting(true);
 
       await deleteHabit(
-        habitToDelete._id
+        habitToDelete._id,
       );
 
       setHabits(
@@ -239,40 +380,47 @@ export default function HabitsPage() {
           current.filter(
             (habit) =>
               habit._id !==
-              habitToDelete._id
-          )
+              habitToDelete._id,
+          ),
       );
 
       /*
-       * Por seguridad, si el mismo
-       * hábito estuviera seleccionado
-       * para seguimiento, lo limpiamos.
+       * Si el mismo hábito estuviera
+       * abierto en seguimiento,
+       * limpiamos también ese estado.
        */
       if (
         habitToTrack?._id ===
         habitToDelete._id
       ) {
         setHabitToTrack(
-          null
+          null,
         );
       }
 
       enqueueSnackbar(
         "Hábito eliminado correctamente.",
         {
-          variant: "success",
-        }
+          variant:
+            "success",
+        },
       );
 
-      setHabitToDelete(null);
-    } catch (deleteError) {
+      setHabitToDelete(
+        null,
+      );
+    } catch (
+      deleteError
+    ) {
       enqueueSnackbar(
-        deleteError instanceof Error
+        deleteError instanceof
+          Error
           ? deleteError.message
           : "No se pudo eliminar el hábito",
         {
-          variant: "error",
-        }
+          variant:
+            "error",
+        },
       );
     } finally {
       setDeleting(false);
@@ -281,6 +429,9 @@ export default function HabitsPage() {
 
   return (
     <Stack spacing={3}>
+      {/*
+       * ENCABEZADO
+       */}
       <Stack
         direction={{
           xs: "column",
@@ -297,16 +448,33 @@ export default function HabitsPage() {
           },
         }}
       >
-        <Typography
-          variant="h5"
-          component="h2"
-        >
-          Hábitos
-        </Typography>
+        <Box>
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
+            Hábitos
+          </Typography>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              mt: 0.5,
+            }}
+          >
+            Gestiona tus hábitos y
+            registra tu progreso.
+          </Typography>
+        </Box>
 
         <Button
           component={Link}
           href="/habits/new"
+          variant="contained"
           startIcon={
             <AddIcon />
           }
@@ -315,158 +483,214 @@ export default function HabitsPage() {
         </Button>
       </Stack>
 
-      <Stack spacing={2}>
-        <TextField
-          placeholder="Buscar hábito"
-          value={search}
-          onChange={(event) =>
-            setSearch(
-              event.target.value
-            )
-          }
+      {/*
+       * BÚSQUEDA
+       */}
+      <TextField
+        placeholder="Buscar hábito"
+        value={search}
+        onChange={(
+          event,
+        ) =>
+          setSearch(
+            event.target.value,
+          )
+        }
+        sx={{
+          maxWidth: {
+            xs: "100%",
+            md: 420,
+          },
+        }}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          },
+        }}
+      />
+
+      {/*
+       * ESTADO + PRIORIDAD
+       */}
+      <HabitFilters
+        value={filter}
+        onChange={
+          setFilter
+        }
+        priority={
+          priority
+        }
+        onPriorityChange={
+          setPriority
+        }
+      />
+
+      {/*
+       * CATEGORÍAS
+       */}
+      <HabitCategoryFilters
+        categories={
+          categories
+        }
+        value={
+          category
+        }
+        onChange={
+          setCategory
+        }
+      />
+
+      {/*
+       * CONTENIDO
+       */}
+      {loading ? (
+        <Box
           sx={{
-            maxWidth: {
-              xs: "100%",
-              md: 420,
-            },
-          }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+            minHeight: 250,
 
-        <HabitFilters
-          value={filter}
-          onChange={setFilter}
-        />
-      </Stack>
+            display: "flex",
 
-      <Card>
-        <CardContent>
+            justifyContent:
+              "center",
+
+            alignItems:
+              "center",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      ) : filteredHabits.length ===
+        0 ? (
+        <Box
+          sx={{
+            py: 8,
+
+            px: 2,
+
+            textAlign:
+              "center",
+
+            border:
+              "1px solid",
+
+            borderColor:
+              "divider",
+
+            borderRadius: 3,
+
+            bgcolor:
+              "background.paper",
+          }}
+        >
           <Typography
             variant="h6"
             gutterBottom
           >
-            Lista de hábitos
+            No hay hábitos para
+            mostrar
           </Typography>
 
-          {loading ? (
-            <Box
-              sx={{
-                minHeight: 250,
-                display: "flex",
-                justifyContent:
-                  "center",
-                alignItems:
-                  "center",
-              }}
-            >
-              <CircularProgress />
-            </Box>
-          ) : filteredHabits.length ===
-            0 ? (
-            <Box
-              sx={{
-                py: 8,
-                textAlign:
-                  "center",
-              }}
-            >
-              <Typography
-                variant="h6"
-                gutterBottom
-              >
-                No hay hábitos para mostrar
-              </Typography>
+          <Typography
+            color="text.secondary"
+          >
+            {habits.length ===
+            0
+              ? "Crea tu primer hábito para comenzar."
+              : "Prueba cambiando la búsqueda o los filtros."}
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          {/*
+           * ESCRITORIO
+           */}
+          <HabitTable
+            habits={
+              filteredHabits
+            }
+            onToggle={
+              handleToggle
+            }
+            onDelete={
+              setHabitToDelete
+            }
+            onTrack={
+              setHabitToTrack
+            }
+          />
 
-              <Typography
-                color="text.secondary"
-              >
-                {habits.length ===
-                0
-                  ? "Crea tu primer hábito para comenzar."
-                  : "Prueba cambiando la búsqueda o los filtros."}
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              <HabitTable
-                habits={
-                  filteredHabits
-                }
-                onToggle={
-                  handleToggle
-                }
-                onDelete={
-                  setHabitToDelete
-                }
-                onTrack={
-                  setHabitToTrack
-                }
-              />
+          {/*
+           * MÓVIL
+           */}
+          <Stack
+            spacing={2}
+            sx={{
+              display: {
+                xs: "flex",
+                md: "none",
+              },
+            }}
+          >
+            {filteredHabits.map(
+              (habit) => (
+                <HabitMobileCard
+                  key={
+                    habit._id
+                  }
+                  habit={
+                    habit
+                  }
+                  onToggle={
+                    handleToggle
+                  }
+                  onDelete={
+                    setHabitToDelete
+                  }
+                  onTrack={
+                    setHabitToTrack
+                  }
+                />
+              ),
+            )}
+          </Stack>
+        </>
+      )}
 
-              <Stack
-                spacing={2}
-                sx={{
-                  display: {
-                    xs: "flex",
-                    md: "none",
-                  },
-                  mt: 2,
-                }}
-              >
-                {filteredHabits.map(
-                  (habit) => (
-                    <HabitMobileCard
-                      key={
-                        habit._id
-                      }
-                      habit={
-                        habit
-                      }
-                      onToggle={
-                        handleToggle
-                      }
-                      onDelete={
-                        setHabitToDelete
-                      }
-                      onTrack={
-                        setHabitToTrack
-                      }
-                    />
-                  )
-                )}
-              </Stack>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
+      {/*
+       * SEGUIMIENTO
+       */}
       <HabitTrackingDialog
-        habit={habitToTrack}
+        habit={
+          habitToTrack
+        }
         open={
           habitToTrack !==
           null
         }
         onClose={() =>
           setHabitToTrack(
-            null
+            null,
           )
         }
       />
 
+      {/*
+       * ELIMINACIÓN
+       */}
       <DeleteHabitDialog
-        habit={habitToDelete}
-        loading={deleting}
+        habit={
+          habitToDelete
+        }
+        loading={
+          deleting
+        }
         onClose={() =>
           setHabitToDelete(
-            null
+            null,
           )
         }
         onConfirm={() =>

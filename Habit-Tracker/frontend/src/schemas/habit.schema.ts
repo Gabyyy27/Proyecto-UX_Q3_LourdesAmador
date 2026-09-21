@@ -29,7 +29,17 @@ export const habitSchema = z
         60,
         "La categoría no puede superar 60 caracteres"
       ),
-
+      icon: z
+      .string()
+      .trim()
+      .min(
+        1,
+        "Selecciona un ícono"
+      )
+      .max(
+        50,
+        "El ícono no es válido"
+      ),
     frequency: z.enum([
       "daily",
       "weekly",

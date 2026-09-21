@@ -9,19 +9,6 @@ import {
   Typography,
 } from "@mui/material";
 
-import { usePathname } from "next/navigation";
-
-
-const pageTitles: Record<
-  string,
-  string
-> = {
-  "/dashboard": "Dashboard",
-  "/habits": "Hábitos",
-  "/statistics": "Estadísticas",
-  "/profile": "Perfil",
-};
-
 type AppNavbarProps = {
   onMenuClick: () => void;
 };
@@ -29,43 +16,6 @@ type AppNavbarProps = {
 export function AppNavbar({
   onMenuClick,
 }: AppNavbarProps) {
-  const pathname = usePathname();
-
-  let title = "Habit Tracker";
-
-  if (pathname === "/habits/new") {
-    title = "Crear hábito";
-  } else if (
-    pathname.startsWith("/habits/") &&
-    pathname.endsWith("/edit")
-  ) {
-    title = "Editar hábito";
-  } else {
-    for (const [route, routeTitle] of Object.entries(pageTitles)) {
-      if (
-        pathname === route ||
-        pathname.startsWith(`${route}/`)
-      ) {
-        title = routeTitle;
-        break;
-      }
-    }
-  }
-  for (const [
-    route,
-    routeTitle,
-  ] of Object.entries(pageTitles)) {
-    if (
-      pathname === route ||
-      pathname.startsWith(
-        `${route}/`,
-      )
-    ) {
-      title = routeTitle;
-      break;
-    }
-  }
-
   return (
     <AppBar
       position="sticky"
@@ -74,8 +24,10 @@ export function AppNavbar({
       sx={{
         bgcolor:
           "background.paper",
+
         borderBottom:
           "1px solid",
+
         borderColor:
           "divider",
       }}
@@ -83,7 +35,9 @@ export function AppNavbar({
       <Toolbar>
         <IconButton
           edge="start"
-          onClick={onMenuClick}
+          onClick={
+            onMenuClick
+          }
           sx={{
             mr: 2,
 
@@ -99,9 +53,14 @@ export function AppNavbar({
 
         <Typography
           variant="h6"
-          component="h1"
+          sx={{
+            color:
+              "primary.main",
+
+            fontWeight: 700,
+          }}
         >
-          {title}
+          Habit Tracker
         </Typography>
       </Toolbar>
     </AppBar>

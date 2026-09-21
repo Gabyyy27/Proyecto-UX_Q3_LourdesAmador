@@ -2,21 +2,33 @@
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 
 import {
+  Box,
+  Button,
   Card,
   CardContent,
   Chip,
-  Divider,
   IconButton,
+  Menu,
+  MenuItem,
   Stack,
-  Switch,
-  Tooltip,
   Typography,
 } from "@mui/material";
 
 import Link from "next/link";
+
+import {
+  useState,
+  type MouseEvent,
+} from "react";
+
+import {
+  getHabitIconComponent,
+} from "@/constants/habit-icons";
 
 import type {
   Habit,
@@ -31,25 +43,20 @@ type HabitMobileCardProps = {
   habit: Habit;
 
   onToggle: (
-    habitId: string
+    habitId: string,
   ) => void;
 
   onDelete: (
-    habit: Habit
+    habit: Habit,
   ) => void;
 
-  /*
-   * Se conectará desde HabitsPage
-   * cuando creemos el diálogo
-   * reutilizable de seguimiento.
-   */
   onTrack?: (
-    habit: Habit
+    habit: Habit,
   ) => void;
 };
 
 function getTrackingLabel(
-  habit: Habit
+  habit: Habit,
 ) {
   const trackingType =
     habit.trackingType ??
@@ -79,246 +86,369 @@ export function HabitMobileCard({
   onDelete,
   onTrack,
 }: HabitMobileCardProps) {
-  return (
-    <Card
-      variant="outlined"
-      sx={{
-        display: {
-          xs: "block",
-          md: "none",
-        },
-      }}
-    >
-      <CardContent>
-        <Stack spacing={2}>
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{
-              justifyContent:
-                "space-between",
+  const [
+    anchorEl,
+    setAnchorEl,
+  ] =
+    useState<HTMLElement | null>(
+      null,
+    );
 
-              alignItems:
-                "flex-start",
-            }}
-          >
+  const menuOpen =
+    Boolean(anchorEl);
+
+  const HabitIcon =
+    getHabitIconComponent(
+      habit.icon,
+    );
+
+  function handleMenuOpen(
+    event:
+      MouseEvent<HTMLElement>,
+  ) {
+    setAnchorEl(
+      event.currentTarget,
+    );
+  }
+
+  function handleMenuClose() {
+    setAnchorEl(null);
+  }
+
+  function handleToggle() {
+    handleMenuClose();
+
+    onToggle(
+      habit._id,
+    );
+  }
+
+  function handleDelete() {
+    handleMenuClose();
+
+    onDelete(
+      habit,
+    );
+  }
+
+  return (
+    <>
+      <Card
+        variant="outlined"
+        sx={{
+          display: {
+            xs: "block",
+            md: "none",
+          },
+
+          borderRadius: 3,
+
+          overflow: "visible",
+        }}
+      >
+        <CardContent
+          sx={{
+            p: 2,
+
+            "&:last-child": {
+              pb: 2,
+            },
+          }}
+        >
+          <Stack spacing={2}>
+            {/*
+             * CABECERA
+             */}
             <Stack
-              spacing={0.5}
+              direction="row"
+              spacing={1.5}
               sx={{
-                minWidth: 0,
+                alignItems:
+                  "flex-start",
               }}
             >
-              <Typography
-                variant="h6"
+              {/*
+               * ÍCONO
+               */}
+              <Box
                 sx={{
-                  overflow:
-                    "hidden",
+                  width: 48,
+                  height: 48,
 
-                  textOverflow:
-                    "ellipsis",
+                  flexShrink: 0,
 
-                  wordBreak:
-                    "break-word",
+                  borderRadius: 2.5,
+
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+
+                  bgcolor:
+                    "action.selected",
+
+                  color:
+                    "primary.main",
                 }}
               >
-                {habit.name}
-              </Typography>
+                <HabitIcon />
+              </Box>
 
-              {habit.description ? (
+              {/*
+               * NOMBRE Y ESTADO
+               */}
+              <Stack
+                spacing={0.6}
+                sx={{
+                  minWidth: 0,
+                  flex: 1,
+                }}
+              >
                 <Typography
-                  variant="body2"
-                  color="text.secondary"
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 700,
+
+                    lineHeight: 1.3,
+
+                    overflow:
+                      "hidden",
+
+                    textOverflow:
+                      "ellipsis",
+
+                    wordBreak:
+                      "break-word",
+                  }}
                 >
-                  {
-                    habit.description
-                  }
+                  {habit.name}
                 </Typography>
-              ) : null}
-            </Stack>
 
-            <Switch
-              checked={
-                habit.active
-              }
-              onChange={() =>
-                onToggle(
-                  habit._id
-                )
-              }
-              slotProps={{
-                input: {
-                  "aria-label":
-                    `Cambiar estado de ${habit.name}`,
-                },
-              }}
-            />
-          </Stack>
+                <Stack
+                  direction="row"
+                  spacing={0.75}
+                  sx={{
+                    alignItems:
+                      "center",
 
-          <Divider />
+                    flexWrap:
+                      "wrap",
 
-          <Stack spacing={1.25}>
-            <Typography
-              variant="body2"
-            >
-              <strong>
-                Categoría:
-              </strong>{" "}
-              {habit.category ||
-                "Sin categoría"}
-            </Typography>
-
-            <Typography
-              variant="body2"
-            >
-              <strong>
-                Frecuencia:
-              </strong>{" "}
-              {getFrequencyLabel(
-                habit.frequency
-              )}
-            </Typography>
-
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                alignItems:
-                  "center",
-
-                flexWrap:
-                  "wrap",
-              }}
-            >
-              <Typography
-                variant="body2"
-              >
-                <strong>
-                  Seguimiento:
-                </strong>
-              </Typography>
-
-              <Chip
-                label={
-                  getTrackingLabel(
-                    habit
-                  )
-                }
-                size="small"
-                variant="outlined"
-              />
-            </Stack>
-
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                alignItems:
-                  "center",
-
-                flexWrap:
-                  "wrap",
-              }}
-            >
-              <Typography
-                variant="body2"
-              >
-                <strong>
-                  Prioridad:
-                </strong>
-              </Typography>
-
-              <Chip
-                label={
-                  getPriorityLabel(
-                    habit.priority
-                  )
-                }
-                size="small"
-                variant="outlined"
-              />
-            </Stack>
-          </Stack>
-
-          <Divider />
-
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{
-              justifyContent:
-                "flex-end",
-            }}
-          >
-            {onTrack ? (
-              <Tooltip
-                title={
-                  habit.active
-                    ? "Registrar seguimiento"
-                    : "Activa el hábito para registrar seguimiento"
-                }
-                arrow
-              >
-                <span>
-                  <IconButton
-                    color="primary"
-                    disabled={
-                      !habit.active
+                    rowGap: 0.75,
+                  }}
+                >
+                  <Chip
+                    label={
+                      habit.active
+                        ? "Activo"
+                        : "Inactivo"
                     }
-                    aria-label={
-                      `Registrar seguimiento de ${habit.name}`
+                    size="small"
+                    variant="outlined"
+                    color={
+                      habit.active
+                        ? "success"
+                        : "default"
                     }
-                    onClick={() =>
-                      onTrack(
-                        habit
+                  />
+
+                  <Chip
+                    label={
+                      getFrequencyLabel(
+                        habit.frequency,
                       )
                     }
-                  >
-                    <TrackChangesIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
+                    size="small"
+                    variant="outlined"
+                  />
+                </Stack>
+              </Stack>
+
+              {/*
+               * MENÚ SECUNDARIO
+               */}
+              <IconButton
+                size="small"
+                aria-label={`Más opciones para ${habit.name}`}
+                aria-haspopup="menu"
+                onClick={
+                  handleMenuOpen
+                }
+              >
+                <MoreVertIcon />
+              </IconButton>
+            </Stack>
+
+            {/*
+             * DESCRIPCIÓN
+             */}
+            {habit.description ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                {
+                  habit.description
+                }
+              </Typography>
             ) : null}
 
-            <Tooltip
-              title="Editar hábito"
-              arrow
-            >
-              <IconButton
-                component={
-                  Link
-                }
-                href={
-                  `/habits/${habit._id}/edit`
-                }
-                aria-label={
-                  `Editar ${habit.name}`
-                }
-              >
-                <EditIcon />
-              </IconButton>
-            </Tooltip>
+            {/*
+             * INFORMACIÓN SECUNDARIA
+             */}
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{
+                flexWrap:
+                  "wrap",
 
-            <Tooltip
-              title="Eliminar hábito"
-              arrow
+                rowGap: 0.75,
+              }}
             >
-              <IconButton
-                color="error"
-                aria-label={
-                  `Eliminar ${habit.name}`
+              {habit.category ? (
+                <Chip
+                  label={
+                    habit.category
+                  }
+                  size="small"
+                  variant="outlined"
+                />
+              ) : null}
+
+              <Chip
+                label={`Prioridad ${getPriorityLabel(
+                  habit.priority,
+                ).toLowerCase()}`}
+                size="small"
+                variant="outlined"
+              />
+
+              <Chip
+                label={
+                  habit.trackingType ===
+                  "quantity"
+                    ? `Objetivo: ${getTrackingLabel(
+                        habit,
+                      )}`
+                    : "Sí / No"
+                }
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+
+            {/*
+             * ACCIÓN PRINCIPAL
+             */}
+            {onTrack ? (
+              <Button
+                fullWidth
+                variant={
+                  habit.active
+                    ? "contained"
+                    : "outlined"
+                }
+                startIcon={
+                  <TrackChangesIcon />
                 }
                 onClick={() =>
-                  onDelete(
-                    habit
+                  onTrack(
+                    habit,
                   )
                 }
+                sx={{
+                  minHeight: 44,
+                  fontWeight: 600,
+                }}
               >
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
+                {habit.active
+                  ? "Seguimiento"
+                  : "Ver historial"}
+              </Button>
+            ) : null}
           </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/*
+       * MENÚ DE ACCIONES
+       */}
+      <Menu
+        anchorEl={
+          anchorEl
+        }
+        open={
+          menuOpen
+        }
+        onClose={
+          handleMenuClose
+        }
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: 190,
+            },
+          },
+        }}
+      >
+        <MenuItem
+          component={Link}
+          href={`/habits/${habit._id}/edit`}
+          onClick={
+            handleMenuClose
+          }
+        >
+          <EditIcon
+            fontSize="small"
+            sx={{
+              mr: 1.5,
+            }}
+          />
+
+          Editar
+        </MenuItem>
+
+        <MenuItem
+          onClick={
+            handleToggle
+          }
+        >
+          <PowerSettingsNewIcon
+            fontSize="small"
+            sx={{
+              mr: 1.5,
+            }}
+          />
+
+          {habit.active
+            ? "Desactivar"
+            : "Activar"}
+        </MenuItem>
+
+        <MenuItem
+          onClick={
+            handleDelete
+          }
+          sx={{
+            color:
+              "error.main",
+          }}
+        >
+          <DeleteIcon
+            fontSize="small"
+            sx={{
+              mr: 1.5,
+            }}
+          />
+
+          Eliminar
+        </MenuItem>
+      </Menu>
+    </>
   );
 }
