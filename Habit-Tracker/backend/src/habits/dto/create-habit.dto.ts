@@ -120,6 +120,11 @@ export class CreateHabitDto {
   @MaxLength(60)
   category?: string;
 
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  icon?: string;
+
   @IsEnum(HabitFrequency)
   frequency!: HabitFrequency;
 

@@ -41,6 +41,28 @@ export class Habit {
   })
   category!: string;
 
+  /*
+   * Ícono visual seleccionado
+   * por el usuario.
+   *
+   * Guardamos únicamente una clave
+   * de texto, no el componente de
+   * Material UI.
+   *
+   * Ejemplos:
+   *
+   * local_drink
+   * fitness_center
+   * menu_book
+   * bedtime
+   */
+  @Prop({
+    type: String,
+    trim: true,
+    default: 'task_alt',
+  })
+  icon!: string;
+
   @Prop({
     required: true,
     enum: HabitFrequency,
