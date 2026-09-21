@@ -27,6 +27,12 @@ import {
 } from "notistack";
 
 import {
+  getHabitCurrentProgress,
+  getHabitsCurrentProgress,
+  type HabitCurrentProgress,
+} from "@/services/habit-records.service";
+
+import {
   deleteHabit,
   getHabits,
   toggleHabit,
@@ -71,6 +77,21 @@ export default function HabitsPage() {
     habits,
     setHabits,
   ] = useState<Habit[]>([]);
+
+  /*
+   * Progreso actual de cada hábito.
+   *
+   * La clave es el _id del hábito.
+   */
+  const [
+    currentProgress,
+    setCurrentProgress,
+  ] = useState<
+    Record<
+      string,
+      HabitCurrentProgress
+    >
+  >({});
 
   const [
     loading,
@@ -122,7 +143,8 @@ export default function HabitsPage() {
   ] = useState(false);
 
   /*
-   * Carga inicial de hábitos.
+   * Carga hábitos y después obtiene
+   * el progreso actual de cada uno.
    */
   const loadHabits =
     useCallback(
@@ -134,8 +156,37 @@ export default function HabitsPage() {
             await getHabits();
 
           setHabits(data);
+
+          /*
+           * El progreso es información
+           * complementaria.
+           *
+           * Si por alguna razón falla,
+           * seguimos mostrando los hábitos.
+           */
+          try {
+            const progress =
+              await getHabitsCurrentProgress(
+                data,
+              );
+
+            setCurrentProgress(
+              progress,
+            );
+          } catch (
+          progressError
+          ) {
+            console.error(
+              "No se pudo cargar el progreso actual:",
+              progressError,
+            );
+
+            setCurrentProgress(
+              {},
+            );
+          }
         } catch (
-          loadError
+        loadError
         ) {
           enqueueSnackbar(
             loadError instanceof
@@ -160,11 +211,6 @@ export default function HabitsPage() {
 
   /*
    * Categorías disponibles.
-   *
-   * - ignoramos categorías vacías
-   * - quitamos espacios
-   * - evitamos duplicados
-   * - ordenamos alfabéticamente
    */
   const categories =
     useMemo(() => {
@@ -234,8 +280,8 @@ export default function HabitsPage() {
         category === "all"
           ? "all"
           : category
-              .trim()
-              .toLowerCase();
+            .trim()
+            .toLowerCase();
 
       return habits.filter(
         (habit) => {
@@ -262,7 +308,7 @@ export default function HabitsPage() {
             filter === "all"
               ? true
               : filter ===
-                  "active"
+                "active"
                 ? habit.active
                 : !habit.active;
 
@@ -270,14 +316,14 @@ export default function HabitsPage() {
             priority === "all"
               ? true
               : habit.priority ===
-                priority;
+              priority;
 
           const matchesCategory =
             normalizedCategory ===
-            "all"
+              "all"
               ? true
               : habitCategory ===
-                normalizedCategory;
+              normalizedCategory;
 
           return (
             matchesSearch &&
@@ -294,7 +340,39 @@ export default function HabitsPage() {
       priority,
       category,
     ]);
+  /*
+   * Actualiza únicamente la card
+   * del hábito que acaba de recibir
+   * seguimiento.
+   */
+  async function handleTrackingUpdated() {
+    if (!habitToTrack) {
+      return;
+    }
 
+    try {
+      const updatedProgress =
+        await getHabitCurrentProgress(
+          habitToTrack,
+        );
+
+      setCurrentProgress(
+        (current) => ({
+          ...current,
+
+          [habitToTrack._id]:
+            updatedProgress,
+        }),
+      );
+    } catch (
+    progressError
+    ) {
+      console.error(
+        "No se pudo actualizar el progreso del hábito:",
+        progressError,
+      );
+    }
+  }
   /*
    * Activa o desactiva
    * un hábito.
@@ -313,21 +391,16 @@ export default function HabitsPage() {
           current.map(
             (habit) =>
               habit._id ===
-              updated._id
+                updated._id
                 ? updated
                 : habit,
           ),
       );
 
-      /*
-       * Si se desactiva un hábito
-       * que está abierto en seguimiento,
-       * cerramos también el diálogo.
-       */
       if (
         !updated.active &&
         habitToTrack?._id ===
-          updated._id
+        updated._id
       ) {
         setHabitToTrack(
           null,
@@ -344,7 +417,7 @@ export default function HabitsPage() {
         },
       );
     } catch (
-      toggleError
+    toggleError
     ) {
       enqueueSnackbar(
         toggleError instanceof
@@ -368,11 +441,14 @@ export default function HabitsPage() {
       return;
     }
 
+    const habitId =
+      habitToDelete._id;
+
     try {
       setDeleting(true);
 
       await deleteHabit(
-        habitToDelete._id,
+        habitId,
       );
 
       setHabits(
@@ -380,18 +456,31 @@ export default function HabitsPage() {
           current.filter(
             (habit) =>
               habit._id !==
-              habitToDelete._id,
+              habitId,
           ),
       );
 
       /*
-       * Si el mismo hábito estuviera
-       * abierto en seguimiento,
-       * limpiamos también ese estado.
+       * Eliminamos también su progreso
+       * del estado local.
        */
+      setCurrentProgress(
+        (current) => {
+          const next = {
+            ...current,
+          };
+
+          delete next[
+            habitId
+          ];
+
+          return next;
+        },
+      );
+
       if (
         habitToTrack?._id ===
-        habitToDelete._id
+        habitId
       ) {
         setHabitToTrack(
           null,
@@ -410,7 +499,7 @@ export default function HabitsPage() {
         null,
       );
     } catch (
-      deleteError
+    deleteError
     ) {
       enqueueSnackbar(
         deleteError instanceof
@@ -598,7 +687,7 @@ export default function HabitsPage() {
             color="text.secondary"
           >
             {habits.length ===
-            0
+              0
               ? "Crea tu primer hábito para comenzar."
               : "Prueba cambiando la búsqueda o los filtros."}
           </Typography>
@@ -607,10 +696,17 @@ export default function HabitsPage() {
         <>
           {/*
            * ESCRITORIO
+           *
+           * En el siguiente paso
+           * HabitTable utilizará
+           * currentProgress.
            */}
           <HabitTable
             habits={
               filteredHabits
+            }
+            progress={
+              currentProgress
             }
             onToggle={
               handleToggle
@@ -625,9 +721,12 @@ export default function HabitsPage() {
 
           {/*
            * MÓVIL
+           *
+           * Por ahora conservamos
+           * las cards actuales.
            */}
           <Stack
-            spacing={2}
+            spacing={10}
             sx={{
               display: {
                 xs: "flex",
@@ -638,49 +737,38 @@ export default function HabitsPage() {
             {filteredHabits.map(
               (habit) => (
                 <HabitMobileCard
-                  key={
+                  key={habit._id}
+                  habit={habit}
+                  progress={
+                    currentProgress[
                     habit._id
+                    ]
                   }
-                  habit={
-                    habit
-                  }
-                  onToggle={
-                    handleToggle
-                  }
-                  onDelete={
-                    setHabitToDelete
-                  }
-                  onTrack={
-                    setHabitToTrack
-                  }
+                  onToggle={handleToggle}
+                  onDelete={setHabitToDelete}
+                  onTrack={setHabitToTrack}
                 />
               ),
             )}
           </Stack>
         </>
       )}
-
-      {/*
-       * SEGUIMIENTO
-       */}
       <HabitTrackingDialog
         habit={
           habitToTrack
         }
         open={
-          habitToTrack !==
-          null
+          habitToTrack !== null
         }
         onClose={() =>
           setHabitToTrack(
             null,
           )
         }
+        onUpdated={() =>
+          void handleTrackingUpdated()
+        }
       />
-
-      {/*
-       * ELIMINACIÓN
-       */}
       <DeleteHabitDialog
         habit={
           habitToDelete

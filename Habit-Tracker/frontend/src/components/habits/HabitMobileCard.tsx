@@ -13,6 +13,7 @@ import {
   CardContent,
   Chip,
   IconButton,
+  LinearProgress,
   Menu,
   MenuItem,
   Stack,
@@ -31,6 +32,10 @@ import {
 } from "@/constants/habit-icons";
 
 import type {
+  HabitCurrentProgress,
+} from "@/services/habit-records.service";
+
+import type {
   Habit,
 } from "@/types/habit";
 
@@ -41,47 +46,61 @@ import {
 
 type HabitMobileCardProps = {
   habit: Habit;
-
+  progress?: HabitCurrentProgress;
   onToggle: (
     habitId: string,
   ) => void;
-
   onDelete: (
     habit: Habit,
   ) => void;
-
   onTrack?: (
     habit: Habit,
   ) => void;
 };
 
-function getTrackingLabel(
+function getProgressText(
   habit: Habit,
+  progress?: HabitCurrentProgress,
 ) {
-  const trackingType =
-    habit.trackingType ??
-    "binary";
-
   if (
-    trackingType ===
-    "quantity"
+    habit.frequency ===
+      "custom" &&
+    progress &&
+    !progress.scheduledToday
   ) {
-    const targetValue =
-      habit.targetValue ?? 0;
-
-    const unit =
-      habit.unit?.trim();
-
-    return unit
-      ? `${targetValue} ${unit}`
-      : `${targetValue}`;
+    return "No programado hoy";
   }
 
-  return "Sí / No";
+  if (
+    habit.trackingType ===
+    "quantity"
+  ) {
+    const currentValue =
+      progress?.currentValue ?? 0;
+
+    const targetValue =
+      progress?.targetValue ??
+      habit.targetValue ??
+      0;
+
+    const unit =
+      progress?.record?.unit?.trim() ||
+      habit.unit?.trim() ||
+      "";
+
+    return unit
+      ? `${currentValue} / ${targetValue} ${unit}`
+      : `${currentValue} / ${targetValue}`;
+  }
+
+  return progress?.completed
+    ? "Completado"
+    : "Pendiente";
 }
 
 export function HabitMobileCard({
   habit,
+  progress,
   onToggle,
   onDelete,
   onTrack,
@@ -102,6 +121,19 @@ export function HabitMobileCard({
       habit.icon,
     );
 
+  const percentage =
+    progress?.percentage ?? 0;
+
+  const scheduledToday =
+    progress?.scheduledToday ??
+    true;
+
+  const progressText =
+    getProgressText(
+      habit,
+      progress,
+    );
+
   function handleMenuOpen(
     event:
       MouseEvent<HTMLElement>,
@@ -117,18 +149,12 @@ export function HabitMobileCard({
 
   function handleToggle() {
     handleMenuClose();
-
-    onToggle(
-      habit._id,
-    );
+    onToggle(habit._id);
   }
 
   function handleDelete() {
     handleMenuClose();
-
-    onDelete(
-      habit,
-    );
+    onDelete(habit);
   }
 
   return (
@@ -140,57 +166,39 @@ export function HabitMobileCard({
             xs: "block",
             md: "none",
           },
-
-          borderRadius: 3,
-
-          overflow: "visible",
         }}
       >
         <CardContent
           sx={{
             p: 2,
-
             "&:last-child": {
               pb: 2,
             },
           }}
         >
           <Stack spacing={2}>
-            {/*
-             * CABECERA
-             */}
+            {/* CABECERA */}
             <Stack
               direction="row"
-              spacing={1.5}
+              spacing={1.25}
               sx={{
                 alignItems:
                   "flex-start",
               }}
             >
-              {/*
-               * ÍCONO
-               */}
               <Box
                 sx={{
                   width: 48,
                   height: 48,
-
                   flexShrink: 0,
-
-                  borderRadius: 2.5,
-
-                  display:
-                    "flex",
-
+                  borderRadius: "50%",
+                  display: "flex",
                   alignItems:
                     "center",
-
                   justifyContent:
                     "center",
-
                   bgcolor:
                     "action.selected",
-
                   color:
                     "primary.main",
                 }}
@@ -198,49 +206,40 @@ export function HabitMobileCard({
                 <HabitIcon />
               </Box>
 
-              {/*
-               * NOMBRE Y ESTADO
-               */}
               <Stack
-                spacing={0.6}
+                spacing={1}
                 sx={{
                   minWidth: 0,
                   flex: 1,
                 }}
               >
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    fontWeight: 700,
-
-                    lineHeight: 1.3,
-
-                    overflow:
-                      "hidden",
-
-                    textOverflow:
-                      "ellipsis",
-
-                    wordBreak:
-                      "break-word",
-                  }}
-                >
-                  {habit.name}
-                </Typography>
-
                 <Stack
                   direction="row"
-                  spacing={0.75}
+                  spacing={1}
                   sx={{
                     alignItems:
                       "center",
-
-                    flexWrap:
-                      "wrap",
-
-                    rowGap: 0.75,
+                    minWidth: 0,
                   }}
                 >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 700,
+                      lineHeight: 1.2,
+                      minWidth: 0,
+                      flex: 1,
+                      overflow:
+                        "hidden",
+                      textOverflow:
+                        "ellipsis",
+                      whiteSpace:
+                        "nowrap",
+                    }}
+                  >
+                    {habit.name}
+                  </Typography>
+
                   <Chip
                     label={
                       habit.active
@@ -248,48 +247,44 @@ export function HabitMobileCard({
                         : "Inactivo"
                     }
                     size="small"
-                    variant="outlined"
                     color={
                       habit.active
                         ? "success"
                         : "default"
                     }
-                  />
-
-                  <Chip
-                    label={
-                      getFrequencyLabel(
-                        habit.frequency,
-                      )
-                    }
-                    size="small"
                     variant="outlined"
+                    sx={{
+                      flexShrink: 0,
+                    }}
                   />
+
+                  <IconButton
+                    size="small"
+                    aria-label={`Más opciones para ${habit.name}`}
+                    aria-haspopup="menu"
+                    onClick={
+                      handleMenuOpen
+                    }
+                    sx={{
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
                 </Stack>
-              </Stack>
-
-              {/*
-               * MENÚ SECUNDARIO
-               */}
-              <IconButton
-                size="small"
-                aria-label={`Más opciones para ${habit.name}`}
-                aria-haspopup="menu"
-                onClick={
-                  handleMenuOpen
-                }
-              >
-                <MoreVertIcon />
-              </IconButton>
-            </Stack>
-
-            {/*
-             * DESCRIPCIÓN
-             */}
+            {/* DESCRIPCIÓN */}
             {habit.description ? (
               <Typography
                 variant="body2"
                 color="text.secondary"
+                sx={{
+                  overflow:
+                    "hidden",
+                  textOverflow:
+                    "ellipsis",
+                  whiteSpace:
+                    "nowrap",
+                }}
               >
                 {
                   habit.description
@@ -297,94 +292,159 @@ export function HabitMobileCard({
               </Typography>
             ) : null}
 
-            {/*
-             * INFORMACIÓN SECUNDARIA
-             */}
-            <Stack
-              direction="row"
-              spacing={0.75}
-              sx={{
-                flexWrap:
-                  "wrap",
+                {/* FILA 2 EN VERTICAL */}
+                <Stack spacing={0.5}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Categoría:{" "}
+                    <Box
+                      component="span"
+                      sx={{
+                        color:
+                          "text.secondary",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {habit.category ||
+                        "Sin categoría"}
+                    </Box>
+                  </Typography>
 
-                rowGap: 0.75,
-              }}
-            >
-              {habit.category ? (
-                <Chip
-                  label={
-                    habit.category
-                  }
-                  size="small"
-                  variant="outlined"
-                />
-              ) : null}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Frecuencia:{" "}
+                    <Box
+                      component="span"
+                      sx={{
+                        color:
+                          "text.secondary",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {getFrequencyLabel(
+                        habit.frequency,
+                      )}
+                    </Box>
+                  </Typography>
 
-              <Chip
-                label={`Prioridad ${getPriorityLabel(
-                  habit.priority,
-                ).toLowerCase()}`}
-                size="small"
-                variant="outlined"
-              />
-
-              <Chip
-                label={
-                  habit.trackingType ===
-                  "quantity"
-                    ? `Objetivo: ${getTrackingLabel(
-                        habit,
-                      )}`
-                    : "Sí / No"
-                }
-                size="small"
-                variant="outlined"
-              />
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Prioridad:{" "}
+                    <Box
+                      component="span"
+                      sx={{
+                        color:
+                          "text.secondary",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {getPriorityLabel(
+                        habit.priority,
+                      )}
+                    </Box>
+                  </Typography>
+                </Stack>
+              </Stack>
             </Stack>
 
-            {/*
-             * ACCIÓN PRINCIPAL
-             */}
-            {onTrack ? (
-              <Button
-                fullWidth
-                variant={
-                  habit.active
-                    ? "contained"
-                    : "outlined"
-                }
-                startIcon={
-                  <TrackChangesIcon />
-                }
-                onClick={() =>
-                  onTrack(
-                    habit,
-                  )
-                }
+            {/* PORCENTAJE */}
+            <Typography
+              sx={{
+                fontSize: "1.5rem",
+                fontWeight: 700,
+                lineHeight: 1.2,
+              }}
+            >
+              {scheduledToday
+                ? `${percentage}%`
+                : "—"}
+            </Typography>
+
+            {/* BARRA + BOTÓN */}
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                alignItems:
+                  "center",
+              }}
+            >
+              <Box
                 sx={{
-                  minHeight: 44,
-                  fontWeight: 600,
+                  flex: 1,
+                  minWidth: 0,
                 }}
               >
-                {habit.active
-                  ? "Seguimiento"
-                  : "Ver historial"}
-              </Button>
-            ) : null}
+                <LinearProgress
+                  variant="determinate"
+                  value={
+                    scheduledToday
+                      ? percentage
+                      : 0
+                  }
+                  sx={{
+                    height: 8,
+                    borderRadius: 999,
+                    bgcolor:
+                      "action.hover",
+                    "& .MuiLinearProgress-bar":
+                      {
+                        borderRadius: 999,
+                      },
+                  }}
+                />
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{
+                    mt: 0.4,
+                  }}
+                >
+                  {progressText}
+                </Typography>
+              </Box>
+
+              {onTrack ? (
+                <Button
+                  variant={
+                    habit.active
+                      ? "contained"
+                      : "outlined"
+                  }
+                  startIcon={
+                    <TrackChangesIcon />
+                  }
+                  onClick={() =>
+                    onTrack(habit)
+                  }
+                  sx={{
+                    minWidth: 132,
+                    px: 1.5,
+                    whiteSpace:
+                      "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  {habit.active
+                    ? "Seguimiento"
+                    : "Ver historial"}
+                </Button>
+              ) : null}
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
 
-      {/*
-       * MENÚ DE ACCIONES
-       */}
       <Menu
-        anchorEl={
-          anchorEl
-        }
-        open={
-          menuOpen
-        }
+        anchorEl={anchorEl}
+        open={menuOpen}
         onClose={
           handleMenuClose
         }
@@ -409,7 +469,6 @@ export function HabitMobileCard({
               mr: 1.5,
             }}
           />
-
           Editar
         </MenuItem>
 
@@ -424,7 +483,6 @@ export function HabitMobileCard({
               mr: 1.5,
             }}
           />
-
           {habit.active
             ? "Desactivar"
             : "Activar"}
@@ -445,7 +503,6 @@ export function HabitMobileCard({
               mr: 1.5,
             }}
           />
-
           Eliminar
         </MenuItem>
       </Menu>

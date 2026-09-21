@@ -19,7 +19,6 @@ import {
     DialogTitle,
     Divider,
     IconButton,
-    LinearProgress,
     Stack,
     TextField,
     Typography,
@@ -906,35 +905,7 @@ export function HabitTrackingDialog({
                                 alignItems: "center",
                             }}
                         >
-                            <Typography
-                                variant="body1"
-                                sx={{
-                                    fontWeight: 600,
-                                    minWidth: 0,
-                                }}
-                            >
-                                Frecuencia:{" "}
-                                <Box
-                                    component="span"
-                                    sx={{
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {getFrequencyLabel(
-                                        habit.frequency
-                                    )}
-                                </Box>
-                            </Typography>
 
-                            <Chip
-                                label={statusLabel}
-                                color={statusColor}
-                                variant="outlined"
-                                size="small"
-                                sx={{
-                                    flexShrink: 0,
-                                }}
-                            />
                         </Stack>
                         {isCustomHabit ? (
                             <Stack spacing={0.75}>
@@ -986,43 +957,49 @@ export function HabitTrackingDialog({
                                 <Stack spacing={1}>
                                     <Stack
                                         direction="row"
+                                        spacing={1}
                                         sx={{
+                                            alignItems: "center",
                                             justifyContent:
                                                 "space-between",
-                                            alignItems:
-                                                "center",
                                         }}
                                     >
-                                        <Typography
-                                            variant="body1"
+                                        <Stack
+                                            direction="row"
+                                            spacing={1}
                                             sx={{
-                                                fontWeight: 600,
+                                                alignItems: "baseline",
                                             }}
                                         >
-                                            Progreso
-                                        </Typography>
+                                            <Typography
+                                                variant="h6"
+                                                sx={{
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                Progreso
+                                            </Typography>
 
-                                        <Typography
-                                            variant="body1"
+                                            <Typography
+                                                variant="body1"
+                                                sx={{
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                {progressPercent}%
+                                            </Typography>
+                                        </Stack>
+
+                                        <Chip
+                                            label={statusLabel}
+                                            color={statusColor}
+                                            variant="outlined"
+                                            size="small"
                                             sx={{
-                                                fontWeight: 700,
+                                                flexShrink: 0,
                                             }}
-                                        >
-                                            {progressPercent}%
-                                        </Typography>
+                                        />
                                     </Stack>
-
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={
-                                            progressPercent
-                                        }
-                                        sx={{
-                                            height: 8,
-                                            borderRadius: 999,
-                                        }}
-                                    />
-
                                     <Typography
                                         variant="body2"
                                         color="text.secondary"

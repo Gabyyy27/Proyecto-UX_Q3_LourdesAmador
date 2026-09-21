@@ -1,13 +1,19 @@
 "use client";
 
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 
 import {
   Box,
   Button,
+  Card,
+  CardContent,
   Chip,
   IconButton,
+  LinearProgress,
   Menu,
   MenuItem,
   Stack,
@@ -26,6 +32,10 @@ import {
 } from "@/constants/habit-icons";
 
 import type {
+  HabitCurrentProgress,
+} from "@/services/habit-records.service";
+
+import type {
   Habit,
 } from "@/types/habit";
 
@@ -36,6 +46,11 @@ import {
 
 type HabitTableProps = {
   habits: Habit[];
+
+  progress: Record<
+    string,
+    HabitCurrentProgress
+  >;
 
   onToggle: (
     habitId: string,
@@ -50,33 +65,50 @@ type HabitTableProps = {
   ) => void;
 };
 
-function getTrackingLabel(
+function getProgressText(
   habit: Habit,
+  progress?: HabitCurrentProgress,
 ) {
-  const trackingType =
-    habit.trackingType ??
-    "binary";
-
   if (
-    trackingType ===
-    "quantity"
+    habit.frequency ===
+    "custom" &&
+    progress &&
+    !progress.scheduledToday
   ) {
-    const targetValue =
-      habit.targetValue ?? 0;
-
-    const unit =
-      habit.unit?.trim();
-
-    return unit
-      ? `${targetValue} ${unit}`
-      : `${targetValue}`;
+    return "No programado hoy";
   }
 
-  return "Sí / No";
+  if (
+    habit.trackingType ===
+    "quantity"
+  ) {
+    const currentValue =
+      progress?.currentValue ??
+      0;
+
+    const targetValue =
+      progress?.targetValue ??
+      habit.targetValue ??
+      0;
+
+    const unit =
+      progress?.record?.unit?.trim() ||
+      habit.unit?.trim() ||
+      "";
+
+    return unit
+      ? `${currentValue} / ${targetValue} ${unit}`
+      : `${currentValue} / ${targetValue}`;
+  }
+
+  return progress?.completed
+    ? "Completado"
+    : "Pendiente";
 }
 
 export function HabitTable({
   habits,
+  progress,
   onToggle,
   onDelete,
   onTrack,
@@ -142,20 +174,22 @@ export function HabitTable({
 
     handleMenuClose();
 
-    onDelete(
-      habit,
-    );
+    onDelete(habit);
   }
 
   return (
     <>
-      <Stack
-        spacing={1.5}
+      <Box
         sx={{
           display: {
             xs: "none",
-            md: "flex",
+            md: "grid",
           },
+
+          gridTemplateColumns:
+            "repeat(2, minmax(0, 1fr))",
+
+          gap: 2,
         }}
       >
         {habits.map(
@@ -165,156 +199,194 @@ export function HabitTable({
                 habit.icon,
               );
 
+            const habitProgress =
+              progress[
+              habit._id
+              ];
+
+            const percentage =
+              habitProgress
+                ?.percentage ??
+              0;
+
+            const scheduledToday =
+              habitProgress
+                ?.scheduledToday ??
+              true;
+
+            const progressText =
+              getProgressText(
+                habit,
+                habitProgress,
+              );
+
             return (
-              <Box
-                key={
-                  habit._id
-                }
+              <Card
+                key={habit._id}
+                variant="outlined"
                 sx={{
-                  display:
-                    "grid",
-
-                  gridTemplateColumns:
-                    "minmax(0, 1fr) auto",
-
-                  gap: 3,
-
-                  alignItems:
-                    "center",
-
-                  px: 2.5,
-                  py: 2,
-
-                  border:
-                    "1px solid",
-
-                  borderColor:
-                    "divider",
-
-                  borderRadius: 3,
-
-                  bgcolor:
-                    "background.paper",
+                  minWidth: 0,
 
                   transition:
-                    "border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease",
+                    "border-color 150ms ease, box-shadow 150ms ease",
 
                   "&:hover": {
                     borderColor:
                       "primary.light",
 
                     boxShadow: 1,
-
-                    transform:
-                      "translateY(-1px)",
                   },
                 }}
               >
-                {/*
-                 * INFORMACIÓN PRINCIPAL
-                 */}
-                <Stack
-                  direction="row"
-                  spacing={2}
+                <CardContent
                   sx={{
-                    minWidth: 0,
-                    alignItems:
-                      "center",
+                    p: 2.25,
+
+                    "&:last-child": {
+                      pb: 2.25,
+                    },
                   }}
                 >
-                  {/*
-                   * ÍCONO
-                   */}
-                  <Box
-                    sx={{
-                      width: 52,
-                      height: 52,
-
-                      flexShrink: 0,
-
-                      borderRadius: 2.5,
-
-                      display:
-                        "flex",
-
-                      alignItems:
-                        "center",
-
-                      justifyContent:
-                        "center",
-
-                      bgcolor:
-                        "action.selected",
-
-                      color:
-                        "primary.main",
-                    }}
-                  >
-                    <HabitIcon />
-                  </Box>
-
-                  {/*
-                   * NOMBRE + METADATOS
-                   */}
-                  <Stack
-                    spacing={0.8}
-                    sx={{
-                      minWidth: 0,
-                      flex: 1,
-                    }}
-                  >
+                  <Stack spacing={2}>
+                    {/*
+                     * CABECERA
+                     */}
                     <Stack
                       direction="row"
-                      spacing={1}
+                      spacing={1.5}
                       sx={{
                         alignItems:
-                          "center",
-
-                        flexWrap:
-                          "wrap",
+                          "flex-start",
                       }}
                     >
-                      <Typography
-                        variant="subtitle1"
+                      {/*
+                       * ÍCONO DEL HÁBITO
+                       */}
+                      <Box
                         sx={{
-                          fontWeight: 700,
+                          width: 52,
+                          height: 52,
 
-                          overflow:
-                            "hidden",
+                          flexShrink: 0,
 
-                          textOverflow:
-                            "ellipsis",
+                          borderRadius:
+                            "50%",
 
-                          whiteSpace:
-                            "nowrap",
+                          display:
+                            "flex",
+
+                          alignItems:
+                            "center",
+
+                          justifyContent:
+                            "center",
+
+                          bgcolor:
+                            "action.selected",
+
+                          color:
+                            "primary.main",
                         }}
                       >
-                        {habit.name}
-                      </Typography>
+                        <HabitIcon />
+                      </Box>
 
-                      <Chip
-                        label={
-                          habit.active
-                            ? "Activo"
-                            : "Inactivo"
-                        }
-                        size="small"
-                        variant="outlined"
-                        color={
-                          habit.active
-                            ? "success"
-                            : "default"
-                        }
-                      />
-                    </Stack>
+                      {/*
+                       * NOMBRE + DATOS
+                       */}
+                      <Stack
+                        spacing={1}
+                        sx={{
+                          minWidth: 0,
+                          flex: 1,
+                        }}
+                      >
+                        {/*
+                         * NOMBRE
+                         * ACTIVO/INACTIVO
+                         * MENÚ
+                         */}
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems:
+                              "center",
 
+                            minWidth: 0,
+                          }}
+                        >
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight:
+                                700,
+
+                              lineHeight:
+                                1.2,
+
+                              minWidth: 0,
+
+                              flex: 1,
+
+                              overflow:
+                                "hidden",
+
+                              textOverflow:
+                                "ellipsis",
+
+                              whiteSpace:
+                                "nowrap",
+                            }}
+                          >
+                            {habit.name}
+                          </Typography>
+
+                          <Chip
+                            label={
+                              habit.active
+                                ? "Activo"
+                                : "Inactivo"
+                            }
+                            size="small"
+                            color={
+                              habit.active
+                                ? "success"
+                                : "default"
+                            }
+                            variant="outlined"
+                            sx={{
+                              flexShrink: 0,
+                            }}
+                          />
+
+                          <IconButton
+                            size="small"
+                            aria-label={`Más opciones para ${habit.name}`}
+                            aria-haspopup="menu"
+                            onClick={(
+                              event,
+                            ) =>
+                              handleMenuOpen(
+                                event,
+                                habit,
+                              )
+                            }
+                            sx={{
+                              flexShrink: 0,
+                            }}
+                          >
+                            <MoreVertIcon />
+                          </IconButton>
+                        </Stack>
+{/*
+                     * DESCRIPCIÓN
+                     */}
                     {habit.description ? (
                       <Typography
                         variant="body2"
                         color="text.secondary"
                         sx={{
-                          maxWidth: 620,
-
                           overflow:
                             "hidden",
 
@@ -330,132 +402,213 @@ export function HabitTable({
                         }
                       </Typography>
                     ) : null}
+                        {/*
+                         * CATEGORÍA
+                         * FRECUENCIA
+                         * PRIORIDAD
+                         */}
+                        <Stack
+                          direction="column"
+                          spacing={0.5}
+                          useFlexGap
+                          sx={{
+                            flexWrap:
+                              "wrap",
 
+                            rowGap: 0.5,
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            Categoría:{" "}
+                            <Box
+                              component="span"
+                              sx={{
+                                color:
+                                  "text.secondary",
+
+                                fontWeight:
+                                  50,
+                              }}
+                            >
+                              {habit.category ||
+                                "Sin categoría"}
+                            </Box>
+                          </Typography>
+
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            Frecuencia:{" "}
+                            <Box
+                              component="span"
+                              sx={{
+                                color:
+                                  "text.secondary",
+
+                                fontWeight:
+                                  50,
+                              }}
+                            >
+                              {getFrequencyLabel(
+                                habit.frequency,
+                              )}
+                            </Box>
+                          </Typography>
+
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            Prioridad:{" "}
+                            <Box
+                              component="span"
+                              sx={{
+                                color:
+                                  "text.secondary",
+
+                                fontWeight:
+                                  50,
+                              }}
+                            >
+                              {getPriorityLabel(
+                                habit.priority,
+                              )}
+                            </Box>
+                          </Typography>
+                        </Stack>
+                      </Stack>
+                    </Stack>
+
+                    {/*
+                     * PORCENTAJE
+                     */}
+                    <Typography
+                      sx={{
+                        fontSize:
+                          "1.25rem",
+
+                        fontWeight: 700,
+
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {scheduledToday
+                        ? `${percentage}%`
+                        : "—"}
+                    </Typography>
+
+                    {/*
+                     * BARRA + BOTÓN
+                     */}
                     <Stack
                       direction="row"
-                      spacing={1}
+                      spacing={2}
                       sx={{
-                        flexWrap:
-                          "wrap",
-
-                        rowGap: 1,
+                        alignItems: "center",
                       }}
                     >
-                      {habit.category ? (
-                        <Chip
-                          label={
-                            habit.category
+                      {/*
+                       * BARRA Y TEXTO
+                       */}
+                      <Box
+                        sx={{
+                          flex: 1,
+
+                          minWidth: 0,
+                        }}
+                      >
+                        <LinearProgress
+                          variant="determinate"
+                          value={
+                            scheduledToday
+                              ? percentage
+                              : 0
                           }
-                          size="small"
-                          variant="outlined"
+                          sx={{
+                            height: 8,
+
+                            borderRadius:
+                              999,
+
+                            bgcolor:
+                              "action.hover",
+
+                            "& .MuiLinearProgress-bar":
+                            {
+                              borderRadius:
+                                999,
+                            },
+                          }}
                         />
+
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            mt: 0.4,
+                          }}
+                        >
+                          {
+                            progressText
+                          }
+                        </Typography>
+                      </Box>
+
+                      {/*
+                       * ACCIÓN PRINCIPAL
+                       */}
+                      {onTrack ? (
+                        <Button
+                          variant={
+                            habit.active
+                              ? "contained"
+                              : "outlined"
+                          }
+                          startIcon={
+                            <TrackChangesIcon />
+                          }
+                          onClick={() =>
+                            onTrack(
+                              habit,
+                            )
+                          }
+                          sx={{
+                            minWidth:
+                              100,
+
+                            px: 2,
+
+                            whiteSpace:
+                              "nowrap",
+
+                            flexShrink: 0,
+
+                          }}
+                        >
+                          {habit.active
+                            ? "Seguimiento"
+                            : "Ver historial"}
+                        </Button>
                       ) : null}
-
-                      <Chip
-                        label={
-                          getFrequencyLabel(
-                            habit.frequency,
-                          )
-                        }
-                        size="small"
-                        variant="outlined"
-                      />
-
-                      <Chip
-                        label={`Prioridad ${getPriorityLabel(
-                          habit.priority,
-                        ).toLowerCase()}`}
-                        size="small"
-                        variant="outlined"
-                      />
-
-                      <Chip
-                        label={
-                          habit.trackingType ===
-                          "quantity"
-                            ? `Objetivo: ${getTrackingLabel(
-                                habit,
-                              )}`
-                            : "Seguimiento Sí / No"
-                        }
-                        size="small"
-                        variant="outlined"
-                      />
                     </Stack>
                   </Stack>
-                </Stack>
-
-                {/*
-                 * ACCIÓN PRINCIPAL
-                 */}
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{
-                    alignItems:
-                      "center",
-
-                    flexShrink: 0,
-                  }}
-                >
-                  {onTrack ? (
-                    <Button
-                      variant={
-                        habit.active
-                          ? "contained"
-                          : "outlined"
-                      }
-                      startIcon={
-                        <TrackChangesIcon />
-                      }
-                      onClick={() =>
-                        onTrack(
-                          habit,
-                        )
-                      }
-                      sx={{
-                        minWidth: 150,
-                        whiteSpace:
-                          "nowrap",
-                      }}
-                    >
-                      {habit.active
-                        ? "Seguimiento"
-                        : "Ver historial"}
-                    </Button>
-                  ) : null}
-
-                  <IconButton
-                    aria-label={`Más opciones para ${habit.name}`}
-                    aria-haspopup="menu"
-                    onClick={(
-                      event,
-                    ) =>
-                      handleMenuOpen(
-                        event,
-                        habit,
-                      )
-                    }
-                  >
-                    <MoreVertIcon />
-                  </IconButton>
-                </Stack>
-              </Box>
+                </CardContent>
+              </Card>
             );
           },
         )}
-      </Stack>
+      </Box>
 
       {/*
-       * MENÚ DE ACCIONES SECUNDARIAS
+       * MENÚ DE ACCIONES
        */}
       <Menu
-        anchorEl={
-          anchorEl
-        }
-        open={
-          menuOpen
-        }
+        anchorEl={anchorEl}
+        open={menuOpen}
         onClose={
           handleMenuClose
         }
@@ -475,6 +628,13 @@ export function HabitTable({
               handleMenuClose
             }
           >
+            <EditIcon
+              fontSize="small"
+              sx={{
+                mr: 1.5,
+              }}
+            />
+
             Editar
           </MenuItem>
         ) : null}
@@ -484,6 +644,13 @@ export function HabitTable({
             handleToggle
           }
         >
+          <PowerSettingsNewIcon
+            fontSize="small"
+            sx={{
+              mr: 1.5,
+            }}
+          />
+
           {selectedHabit?.active
             ? "Desactivar"
             : "Activar"}
@@ -498,6 +665,13 @@ export function HabitTable({
               "error.main",
           }}
         >
+          <DeleteIcon
+            fontSize="small"
+            sx={{
+              mr: 1.5,
+            }}
+          />
+
           Eliminar
         </MenuItem>
       </Menu>
