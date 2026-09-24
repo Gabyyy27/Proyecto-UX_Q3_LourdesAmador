@@ -722,6 +722,19 @@ export class HabitRecordsService {
    * Una sola acción completa todo
    * el período.
    */
+  /*
+ * COMPLETAR HÁBITO
+ *
+ * BINARIO:
+ * - currentValue = 1
+ *
+ * CANTIDAD:
+ * - currentValue = targetValue
+ *
+ * En ambos casos:
+ * - completed = true
+ * - completedAt = fecha actual
+ */
   async completeHabit(
     habitId: string,
     userId: string,
@@ -747,15 +760,6 @@ export class HabitRecordsService {
       habit.trackingType ??
       HabitTrackingType.BINARY;
 
-    if (
-      trackingType !==
-      HabitTrackingType.BINARY
-    ) {
-      throw new BadRequestException(
-        'Los hábitos por cantidad se completan registrando progreso',
-      );
-    }
-
     const period =
       this.getPeriodDescriptor(
         habit.frequency,
@@ -772,62 +776,202 @@ export class HabitRecordsService {
         now,
       );
 
-    if (
-      record.completed
-    ) {
+    if (record.completed) {
       throw new ConflictException(
         'Este hábito ya fue completado en el período actual',
       );
     }
 
     /*
-     * La condición completed:false hace
-     * que dos clics simultáneos no puedan
-     * completar dos veces el mismo período.
+     * BINARIO
      */
-    const completedRecord =
-      await this.habitRecordModel
-        .findOneAndUpdate(
-          {
-            _id:
-              record._id,
-
-            completed:
-              false,
-          },
-          {
-            $set: {
-              currentValue:
-                1,
+    if (
+      trackingType ===
+      HabitTrackingType.BINARY
+    ) {
+      const completedRecord =
+        await this.habitRecordModel
+          .findOneAndUpdate(
+            {
+              _id:
+                record._id,
 
               completed:
-                true,
-
-              completedAt:
-                now,
+                false,
             },
-          },
-          {
-            new:
-              true,
-          },
-        );
+            {
+              $set: {
+                currentValue:
+                  1,
 
-    if (
-      !completedRecord
-    ) {
-      throw new ConflictException(
-        'Este hábito ya fue completado en el período actual',
-      );
+                completed:
+                  true,
+
+                completedAt:
+                  now,
+              },
+            },
+            {
+              new:
+                true,
+            },
+          );
+
+      if (!completedRecord) {
+        throw new ConflictException(
+          'Este hábito ya fue completado en el período actual',
+        );
+      }
+
+      return {
+        message:
+          'Hábito marcado como completado',
+
+        record:
+          completedRecord,
+      };
     }
 
-    return {
-      message:
-        'Hábito marcado como completado',
+    /*
+     * CANTIDAD
+     *
+     * Calculamos cuánto falta para llegar
+     * exactamente al objetivo.
+     *
+     * Ejemplo:
+     *
+     * actual = 400
+     * objetivo = 500
+     * faltante = 100
+     */
+    const remainingAmount =
+      Math.max(
+        record.targetValue -
+        record.currentValue,
+        0,
+      );
 
-      record:
-        completedRecord,
-    };
+    /*
+     * Guardamos también el avance restante
+     * como entrada de progreso.
+     *
+     * De esta forma el historial interno
+     * sigue siendo consistente con
+     * currentValue.
+     */
+    let completionEntry:
+      HabitProgressEntryDocument |
+      null = null;
+
+    if (
+      remainingAmount > 0
+    ) {
+      completionEntry =
+        new this
+          .habitProgressEntryModel({
+            habitId:
+              new Types.ObjectId(
+                habitId,
+              ),
+
+            userId:
+              new Types.ObjectId(
+                userId,
+              ),
+
+            habitRecordId:
+              record._id,
+
+            dateKey:
+              period.dateKey,
+
+            amount:
+              remainingAmount,
+
+            occurredAt:
+              now,
+          });
+
+      await completionEntry.save();
+    }
+
+    try {
+      const completedRecord =
+        await this.habitRecordModel
+          .findOneAndUpdate(
+            {
+              _id:
+                record._id,
+
+              completed:
+                false,
+            },
+            {
+              $set: {
+                currentValue:
+                  record.targetValue,
+
+                completed:
+                  true,
+
+                completedAt:
+                  now,
+              },
+            },
+            {
+              new:
+                true,
+            },
+          );
+
+      if (!completedRecord) {
+        /*
+         * Si otra petición completó el hábito
+         * antes que esta, eliminamos la entrada
+         * que acabamos de crear.
+         */
+        if (
+          completionEntry
+        ) {
+          await this
+            .habitProgressEntryModel
+            .deleteOne({
+              _id:
+                completionEntry._id,
+            });
+        }
+
+        throw new ConflictException(
+          'Este hábito ya fue completado en el período actual',
+        );
+      }
+
+      return {
+        message:
+          'Objetivo marcado como completado',
+
+        record:
+          completedRecord,
+      };
+    } catch (error) {
+      /*
+       * Si falla la actualización,
+       * evitamos dejar una entrada de
+       * progreso huérfana.
+       */
+      if (
+        completionEntry
+      ) {
+        await this
+          .habitProgressEntryModel
+          .deleteOne({
+            _id:
+              completionEntry._id,
+          });
+      }
+
+      throw error;
+    }
   }
 
   /*
@@ -1446,12 +1590,12 @@ export class HabitRecordsService {
         new Set<string>();
 
       /*
-       * El día solo está cumplido si
-       * TODOS los hábitos esperados
-       * fueron completados.
-       */
+   * El día se considera cumplido
+   * cuando AL MENOS UN hábito
+   * esperado fue completado.
+   */
       const completed =
-        expectedHabits.every(
+        expectedHabits.some(
           (habit) =>
             completedHabits.has(
               String(
@@ -2067,21 +2211,19 @@ export class HabitRecordsService {
         new Set<string>();
 
       /*
-       * La semana está completada
-       * solamente si TODOS los hábitos
-       * semanales esperados se
-       * completaron.
-       */
-      const completed =
-        expectedHabits.every(
-          (habit) =>
-            completedHabits.has(
-              String(
-                habit._id,
-              ),
-            ),
-        );
-
+ * La semana se considera cumplida
+ * cuando AL MENOS UN hábito
+ * semanal esperado fue completado.
+ */
+const completed =
+  expectedHabits.some(
+    (habit) =>
+      completedHabits.has(
+        String(
+          habit._id,
+        ),
+      ),
+  );
       weeks.push({
         weekKey,
         hasHabits: true,
@@ -3269,27 +3411,27 @@ export class HabitRecordsService {
  * Así evitamos contar hábitos de días
  * futuros dentro de la semana actual.
  */
-const scheduledHabits =
-  measurableDays.reduce(
-    (
-      total,
-      day,
-    ) =>
-      total +
-      day.scheduledHabits,
-    0,
-  );
+      const scheduledHabits =
+        measurableDays.reduce(
+          (
+            total,
+            day,
+          ) =>
+            total +
+            day.scheduledHabits,
+          0,
+        );
 
-const completedHabits =
-  measurableDays.reduce(
-    (
-      total,
-      day,
-    ) =>
-      total +
-      day.completedHabits,
-    0,
-  );
+      const completedHabits =
+        measurableDays.reduce(
+          (
+            total,
+            day,
+          ) =>
+            total +
+            day.completedHabits,
+          0,
+        );
 
       const isFuture =
         weekStart.getTime() >

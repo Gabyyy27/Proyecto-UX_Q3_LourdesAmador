@@ -24,6 +24,7 @@ import {
 export type HabitIconOption = {
   value: string;
   label: string;
+  category: string | null;
   Icon: SvgIconComponent;
 };
 
@@ -37,84 +38,106 @@ export type HabitIconOption = {
 export const HABIT_ICON_OPTIONS:
   HabitIconOption[] = [
     {
-      value: "task_alt",
-      label: "General",
-      Icon: TaskAlt,
-    },
-    {
       value: "local_drink",
       label: "Agua",
+      category: "Agua",
       Icon: LocalDrink,
     },
     {
       value: "fitness_center",
       label: "Ejercicio",
+      category: "Ejercicio",
       Icon: FitnessCenter,
     },
     {
       value: "menu_book",
       label: "Lectura",
+      category: "Lectura",
       Icon: MenuBook,
     },
     {
       value: "school",
       label: "Estudio",
+      category: "Estudio",
       Icon: School,
     },
     {
       value: "bedtime",
       label: "Dormir",
+      category: "Dormir",
       Icon: Bedtime,
     },
     {
       value: "self_improvement",
       label: "Meditación",
+      category: "Meditación",
       Icon: SelfImprovement,
     },
     {
       value: "directions_walk",
       label: "Caminar",
+      category: "Caminar",
       Icon: DirectionsWalk,
     },
     {
       value: "restaurant",
       label: "Alimentación",
+      category: "Alimentación",
       Icon: Restaurant,
     },
     {
       value: "savings",
       label: "Ahorro",
+      category: "Ahorro",
       Icon: Savings,
     },
     {
       value: "cleaning_services",
       label: "Limpieza",
+      category: "Limpieza",
       Icon: CleaningServices,
     },
     {
       value: "work",
       label: "Trabajo",
+      category: "Trabajo",
       Icon: Work,
     },
     {
       value: "music_note",
       label: "Música",
+      category: "Música",
       Icon: MusicNote,
     },
     {
       value: "pets",
       label: "Mascotas",
+      category: "Mascotas",
       Icon: Pets,
     },
     {
       value: "favorite",
       label: "Bienestar",
+      category: "Bienestar",
       Icon: Favorite,
     },
     {
       value: "sports_soccer",
       label: "Deporte",
+      category: "Deporte",
       Icon: SportsSoccer,
+    },
+
+    /*
+     * Siempre debe quedar de último.
+     * Permite que el usuario escriba
+     * una categoría personalizada.
+     */
+    {
+      value: "task_alt",
+      label: "Otro",
+      category: null,
+      Icon: TaskAlt,
     },
   ];
 
@@ -136,12 +159,17 @@ export function getHabitIconOption(
   icon?: string,
 ): HabitIconOption {
   return (
-    HABIT_ICON_OPTIONS.find(
-      (option) =>
-        option.value === icon,
-    ) ??
-    HABIT_ICON_OPTIONS[0]
-  );
+  HABIT_ICON_OPTIONS.find(
+    (option) =>
+      option.value === icon,
+  ) ??
+  HABIT_ICON_OPTIONS.find(
+    (option) =>
+      option.value ===
+      DEFAULT_HABIT_ICON,
+  ) ??
+  HABIT_ICON_OPTIONS[0]
+);
 }
 
 /*

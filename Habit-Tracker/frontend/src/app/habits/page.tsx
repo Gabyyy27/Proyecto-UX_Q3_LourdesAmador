@@ -386,17 +386,20 @@ export default function HabitsPage() {
           habitId,
         );
 
-      setHabits(
-        (current) =>
-          current.map(
-            (habit) =>
-              habit._id ===
-                updated._id
-                ? updated
-                : habit,
-          ),
-      );
+      setHabits((current) => {
+        const updatedHabits =
+          current.map((habit) =>
+            habit._id === updated._id
+              ? updated
+              : habit,
+          );
 
+        return updatedHabits.sort(
+          (first, second) =>
+            Number(second.active) -
+            Number(first.active),
+        );
+      });
       if (
         !updated.active &&
         habitToTrack?._id ===

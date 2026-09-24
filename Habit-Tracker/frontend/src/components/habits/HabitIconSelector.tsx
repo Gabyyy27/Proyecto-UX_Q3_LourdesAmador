@@ -35,7 +35,7 @@ export function HabitIconSelector({
           fontWeight: 600,
         }}
       >
-        Ícono
+        Categoría
       </Typography>
 
       <Typography
@@ -45,13 +45,13 @@ export function HabitIconSelector({
           mb: 1.5,
         }}
       >
-        Selecciona un ícono para
-        identificar este hábito.
+        Selecciona la categoría que mejor
+        representa este hábito.
       </Typography>
 
       <Box
         role="radiogroup"
-        aria-label="Ícono del hábito"
+        aria-label="Categoría del hábito"
         sx={{
           display: "grid",
 
@@ -72,7 +72,7 @@ export function HabitIconSelector({
         {HABIT_ICON_OPTIONS.map(
           ({
             value:
-              optionValue,
+            optionValue,
 
             label,
 
@@ -150,22 +150,22 @@ export function HabitIconSelector({
                   },
 
                   "&.Mui-focusVisible":
-                    {
-                      outline:
-                        "2px solid",
+                  {
+                    outline:
+                      "2px solid",
 
-                      outlineColor:
-                        "primary.main",
+                    outlineColor:
+                      "primary.main",
 
-                      outlineOffset:
-                        "2px",
-                    },
+                    outlineOffset:
+                      "2px",
+                  },
 
                   "&.Mui-disabled":
-                    {
-                      opacity:
-                        0.5,
-                    },
+                  {
+                    opacity:
+                      0.5,
+                  },
                 }}
               >
                 <Box

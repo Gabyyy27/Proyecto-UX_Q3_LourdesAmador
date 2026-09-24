@@ -29,7 +29,7 @@ export class HabitsService {
     @InjectModel(Habit.name)
     private readonly habitModel:
       Model<HabitDocument>,
-  ) {}
+  ) { }
 
   /*
    * Normaliza y valida los campos
@@ -54,7 +54,7 @@ export class HabitsService {
     ) {
       if (
         createHabitDto.targetValue !==
-          undefined &&
+        undefined &&
         createHabitDto.targetValue !== 1
       ) {
         throw new BadRequestException(
@@ -131,7 +131,7 @@ export class HabitsService {
     ) {
       if (
         updateHabitDto.targetValue !==
-          undefined &&
+        undefined &&
         updateHabitDto.targetValue !== 1
       ) {
         throw new BadRequestException(
@@ -157,14 +157,14 @@ export class HabitsService {
      */
     const changingToQuantity =
       currentTrackingType !==
-        HabitTrackingType.QUANTITY &&
+      HabitTrackingType.QUANTITY &&
       updateHabitDto.trackingType ===
-        HabitTrackingType.QUANTITY;
+      HabitTrackingType.QUANTITY;
 
     if (
       changingToQuantity &&
       updateHabitDto.targetValue ===
-        undefined
+      undefined
     ) {
       throw new BadRequestException(
         'Debes indicar targetValue al cambiar un hábito a tipo quantity',
@@ -225,8 +225,8 @@ export class HabitsService {
       endDate:
         createHabitDto.endDate
           ? new Date(
-              createHabitDto.endDate,
-            )
+            createHabitDto.endDate,
+          )
           : null,
 
       userId:
@@ -249,6 +249,7 @@ export class HabitsService {
           ),
       })
       .sort({
+        active: -1,
         createdAt: -1,
       });
   }
@@ -322,20 +323,20 @@ export class HabitsService {
 
       ...(updateHabitDto.startDate
         ? {
-            startDate:
-              new Date(
-                updateHabitDto.startDate,
-              ),
-          }
+          startDate:
+            new Date(
+              updateHabitDto.startDate,
+            ),
+        }
         : {}),
 
       ...(updateHabitDto.endDate
         ? {
-            endDate:
-              new Date(
-                updateHabitDto.endDate,
-              ),
-          }
+          endDate:
+            new Date(
+              updateHabitDto.endDate,
+            ),
+        }
         : {}),
     };
 

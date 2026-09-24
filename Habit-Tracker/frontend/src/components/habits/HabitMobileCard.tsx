@@ -17,6 +17,7 @@ import {
   Menu,
   MenuItem,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
@@ -41,7 +42,6 @@ import type {
 
 import {
   getFrequencyLabel,
-  getPriorityLabel,
 } from "./habitLabels";
 
 type HabitMobileCardProps = {
@@ -64,7 +64,7 @@ function getProgressText(
 ) {
   if (
     habit.frequency ===
-      "custom" &&
+    "custom" &&
     progress &&
     !progress.scheduledToday
   ) {
@@ -97,7 +97,54 @@ function getProgressText(
     ? "Completado"
     : "Pendiente";
 }
+const habitCardColors = [
+  "#1976d2",
+  "#2e7d32",
+  "#ed6c02",
+  "#9c27b0",
+  "#0288d1",
+  "#d32f2f",
+  "#6d4c41",
+  "#00897b",
+];
 
+function getHabitCardColor(
+  habitId: string,
+) {
+  let hash = 0;
+
+  for (
+    let index = 0;
+    index < habitId.length;
+    index += 1
+  ) {
+    hash =
+      habitId.charCodeAt(index) +
+      ((hash << 5) - hash);
+  }
+
+  return habitCardColors[
+    Math.abs(hash) %
+    habitCardColors.length
+  ];
+}
+function getPriorityColor(
+  priority: Habit["priority"],
+) {
+  switch (priority) {
+    case "high":
+      return "#d32f2f";
+
+    case "medium":
+      return "#ed6c02";
+
+    case "low":
+      return "#fbc02d";
+
+    default:
+      return "#bdbdbd";
+  }
+}
 export function HabitMobileCard({
   habit,
   progress,
@@ -133,7 +180,10 @@ export function HabitMobileCard({
       habit,
       progress,
     );
-
+  const cardColor =
+    getHabitCardColor(
+      habit._id,
+    );
   function handleMenuOpen(
     event:
       MouseEvent<HTMLElement>,
@@ -166,6 +216,15 @@ export function HabitMobileCard({
             xs: "block",
             md: "none",
           },
+
+          border: "1.5px solid",
+          borderColor:
+            cardColor,
+
+          "&:hover": {
+            borderColor:
+              cardColor,
+          },
         }}
       >
         <CardContent
@@ -186,25 +245,34 @@ export function HabitMobileCard({
                   "flex-start",
               }}
             >
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  flexShrink: 0,
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems:
-                    "center",
-                  justifyContent:
-                    "center",
-                  bgcolor:
-                    "action.selected",
-                  color:
-                    "primary.main",
-                }}
+              <Tooltip
+                title={
+                  habit.category ||
+                  "Sin categoría"
+                }
+                arrow
               >
-                <HabitIcon />
-              </Box>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    flexShrink: 0,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    justifyContent:
+                      "center",
+                    bgcolor:
+                      "action.selected",
+                    color:
+                      "primary.main",
+                    cursor: "help",
+                  }}
+                >
+                  <HabitIcon />
+                </Box>
+              </Tooltip>
 
               <Stack
                 spacing={1}
@@ -257,6 +325,26 @@ export function HabitMobileCard({
                       flexShrink: 0,
                     }}
                   />
+                  <Box
+                    component="span"
+                    title={
+                      habit.priority === "high"
+                        ? "Prioridad alta"
+                        : habit.priority === "medium"
+                          ? "Prioridad media"
+                          : "Prioridad baja"
+                    }
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      bgcolor:
+                        getPriorityColor(
+                          habit.priority,
+                        ),
+                      flexShrink: 0,
+                    }}
+                  />
 
                   <IconButton
                     size="small"
@@ -272,83 +360,55 @@ export function HabitMobileCard({
                     <MoreVertIcon />
                   </IconButton>
                 </Stack>
-            {/* DESCRIPCIÓN */}
-            {habit.description ? (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{
-                  overflow:
-                    "hidden",
-                  textOverflow:
-                    "ellipsis",
-                  whiteSpace:
-                    "nowrap",
-                }}
-              >
-                {
-                  habit.description
-                }
-              </Typography>
-            ) : null}
+                {/* DESCRIPCIÓN */}
+                {habit.description ? (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      overflow:
+                        "hidden",
+                      textOverflow:
+                        "ellipsis",
+                      whiteSpace:
+                        "nowrap",
+                    }}
+                  >
+                    {
+                      habit.description
+                    }
+                  </Typography>
+                ) : null}
 
                 {/* FILA 2 EN VERTICAL */}
                 <Stack spacing={0.5}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{
+                      alignItems: "center",
+                    }}
                   >
-                    Categoría:{" "}
-                    <Box
+                    <Typography
                       component="span"
-                      sx={{
-                        color:
-                          "text.secondary",
-                        fontWeight: 500,
-                      }}
+                      variant="caption"
+                      aria-hidden
                     >
-                      {habit.category ||
-                        "Sin categoría"}
-                    </Box>
-                  </Typography>
+                      📅
+                    </Typography>
 
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Frecuencia:{" "}
-                    <Box
-                      component="span"
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
                       sx={{
-                        color:
-                          "text.secondary",
                         fontWeight: 500,
                       }}
                     >
                       {getFrequencyLabel(
                         habit.frequency,
                       )}
-                    </Box>
-                  </Typography>
-
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Prioridad:{" "}
-                    <Box
-                      component="span"
-                      sx={{
-                        color:
-                          "text.secondary",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {getPriorityLabel(
-                        habit.priority,
-                      )}
-                    </Box>
-                  </Typography>
+                    </Typography>
+                  </Stack>
                 </Stack>
               </Stack>
             </Stack>
@@ -394,9 +454,9 @@ export function HabitMobileCard({
                     bgcolor:
                       "action.hover",
                     "& .MuiLinearProgress-bar":
-                      {
-                        borderRadius: 999,
-                      },
+                    {
+                      borderRadius: 999,
+                    },
                   }}
                 />
 

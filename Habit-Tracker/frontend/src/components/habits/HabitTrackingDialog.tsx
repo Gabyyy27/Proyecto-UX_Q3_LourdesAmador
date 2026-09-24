@@ -708,41 +708,55 @@ export function HabitTrackingDialog({
         if (!habit) {
             return;
         }
+
         if (!scheduledToday) {
             enqueueSnackbar(
                 "Este hábito solo se puede completar los días asignados.",
                 {
                     variant: "info",
-                }
+                },
             );
 
             return;
         }
+
         try {
             setSaving(true);
 
             const response =
                 await completeHabit(
-                    habit._id
+                    habit._id,
                 );
 
             enqueueSnackbar(
                 response.message,
                 {
                     variant: "success",
-                }
+                },
             );
 
-            await loadHistory();
+            /*
+             * Actualizamos la card de Hábitos.
+             */
             onUpdated?.();
-        } catch (completeError) {
+
+            /*
+             * Como completeHabit siempre deja
+             * el período completado, cerramos
+             * el modal automáticamente.
+             */
+            onClose();
+        } catch (
+        completeError
+        ) {
             enqueueSnackbar(
-                completeError instanceof Error
+                completeError instanceof
+                    Error
                     ? completeError.message
                     : "No se pudo completar el hábito",
                 {
                     variant: "error",
-                }
+                },
             );
         } finally {
             setSaving(false);
@@ -759,7 +773,7 @@ export function HabitTrackingDialog({
                 "Este hábito solo permite registrar progreso los días asignados.",
                 {
                     variant: "info",
-                }
+                },
             );
 
             return;
@@ -768,13 +782,14 @@ export function HabitTrackingDialog({
         if (!validAmount) {
             return;
         }
+
         try {
             setSaving(true);
 
             const response =
                 await addHabitProgress(
                     habit._id,
-                    parsedAmount
+                    parsedAmount,
                 );
 
             setAmount("");
@@ -783,25 +798,48 @@ export function HabitTrackingDialog({
                 response.message,
                 {
                     variant: "success",
-                }
+                },
             );
 
-            await loadHistory();
+            /*
+             * Actualizamos inmediatamente
+             * la card de Hábitos.
+             */
             onUpdated?.();
-        } catch (progressError) {
+
+            /*
+             * Si con este avance llegamos
+             * al objetivo, cerramos el modal.
+             */
+            if (
+                response.record.completed
+            ) {
+                onClose();
+                return;
+            }
+
+            /*
+             * Si todavía no llegó al 100%,
+             * mantenemos abierto el modal y
+             * actualizamos sus datos.
+             */
+            await loadHistory();
+        } catch (
+        progressError
+        ) {
             enqueueSnackbar(
-                progressError instanceof Error
+                progressError instanceof
+                    Error
                     ? progressError.message
                     : "No se pudo registrar el progreso",
                 {
                     variant: "error",
-                }
+                },
             );
         } finally {
             setSaving(false);
         }
     }
-
     return (
         <Dialog
             open={open}
@@ -951,10 +989,10 @@ export function HabitTrackingDialog({
                                 ) : null}
                             </Stack>
                         ) : null}
-                        {trackingType ===
-                            "quantity" ? (
-                            <Stack spacing={2}>
-                                <Stack spacing={1}>
+                        {trackingType === "quantity" ? (
+                            <Stack spacing={2.5}>
+                                {/* PROGRESO */}
+                                <Stack spacing={0.75}>
                                     <Stack
                                         direction="row"
                                         spacing={1}
@@ -1000,8 +1038,9 @@ export function HabitTrackingDialog({
                                             }}
                                         />
                                     </Stack>
+
                                     <Typography
-                                        variant="body2"
+                                        variant="body1"
                                         color="text.secondary"
                                     >
                                         {currentValue} /{" "}
@@ -1012,6 +1051,34 @@ export function HabitTrackingDialog({
                                     </Typography>
                                 </Stack>
 
+                                {/* INPUT */}
+                                <TextField
+                                    label={
+                                        unit
+                                            ? `Cantidad (${unit})`
+                                            : "Cantidad"
+                                    }
+                                    type="number"
+                                    size="small"
+                                    value={amount}
+                                    onChange={(event) =>
+                                        setAmount(
+                                            event.target.value,
+                                        )
+                                    }
+                                    disabled={
+                                        registrationDisabled
+                                    }
+                                    slotProps={{
+                                        htmlInput: {
+                                            min: 0,
+                                            step: "any",
+                                        },
+                                    }}
+                                    fullWidth
+                                />
+
+                                {/* BOTONES */}
                                 <Stack
                                     direction={{
                                         xs: "column",
@@ -1021,73 +1088,84 @@ export function HabitTrackingDialog({
                                     sx={{
                                         alignItems: {
                                             xs: "stretch",
-                                            sm: "flex-start",
+                                            sm: "center",
                                         },
                                     }}
                                 >
-                                    <TextField
-                                        label={
-                                            unit
-                                                ? `Cantidad (${unit})`
-                                                : "Cantidad"
-                                        }
-                                        type="number"
-                                        size="small"
-                                        value={amount}
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            setAmount(
-                                                event.target
-                                                    .value
-                                            )
-                                        }
-                                        disabled={
-                                            completed ||
-                                            saving
-                                        }
-                                        slotProps={{
-                                            htmlInput: {
-                                                min: 0,
-                                                step: "any",
-                                            },
-                                        }}
-                                        fullWidth
-                                    />
-
                                     <Button
                                         variant="contained"
                                         disabled={
-                                            completed ||
-                                            saving ||
+                                            registrationDisabled ||
                                             !validAmount
                                         }
                                         onClick={() =>
                                             void handleAddProgress()
                                         }
                                         sx={{
-                                            whiteSpace:
-                                                "nowrap",
-                                            minWidth: 190,
+                                            whiteSpace: "nowrap",
                                         }}
                                     >
                                         {saving
                                             ? "Guardando..."
-                                            : completed
-                                                ? "Objetivo completado"
-                                                : "Agregar progreso"}
+                                            : "Agregar progreso"}
+                                    </Button>
+
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={
+                                            <CheckCircleOutlinedIcon />
+                                        }
+                                        disabled={
+                                            registrationDisabled
+                                        }
+                                        onClick={() =>
+                                            void handleComplete()
+                                        }
+                                        sx={{
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {saving
+                                            ? "Guardando..."
+                                            : "Marcar como completado"}
                                     </Button>
                                 </Stack>
                             </Stack>
                         ) : (
                             <Stack spacing={1.5}>
+                                <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{
+                                        alignItems: "center",
+                                        justifyContent:
+                                            "space-between",
+                                    }}
+                                >
+                                    <Typography
+                                        variant="body1"
+                                        sx={{
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        Estado
+                                    </Typography>
+
+                                    <Chip
+                                        label={statusLabel}
+                                        color={statusColor}
+                                        variant="outlined"
+                                        size="small"
+                                    />
+                                </Stack>
+
                                 <Typography
                                     variant="body2"
                                     color="text.secondary"
                                 >
                                     {completed
                                         ? "Este hábito ya fue completado en la frecuencia actual."
-                                        : " "}
+                                        : "Marca el hábito como completado cuando hayas cumplido tu objetivo."}
                                 </Typography>
 
                                 <Button

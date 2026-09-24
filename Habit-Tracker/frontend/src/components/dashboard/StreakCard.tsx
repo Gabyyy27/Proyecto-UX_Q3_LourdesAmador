@@ -80,11 +80,15 @@ export function StreakCard({
             spacing={0.25}
             sx={{
               minWidth: 0,
+              flex: 1,
             }}
           >
             <Typography
               variant="body2"
               color="text.secondary"
+              sx={{
+                whiteSpace: "nowrap",
+              }}
             >
               {label}
             </Typography>
@@ -93,6 +97,7 @@ export function StreakCard({
               variant="h5"
               sx={{
                 fontWeight: 700,
+                whiteSpace: "nowrap",
               }}
             >
               {value}{" "}

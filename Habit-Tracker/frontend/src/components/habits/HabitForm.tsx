@@ -46,7 +46,9 @@ import {
 
 import {
   DEFAULT_HABIT_ICON,
+  getHabitIconOption,
 } from "@/constants/habit-icons";
+
 import type {
   Habit,
   HabitFormData,
@@ -105,7 +107,7 @@ function createInitialForm(
       description:
         habit.description ?? "",
 
-            category:
+      category:
         habit.category ?? "",
 
       icon:
@@ -148,9 +150,9 @@ function createInitialForm(
       endDate:
         habit.endDate
           ? habit.endDate.slice(
-              0,
-              10
-            )
+            0,
+            10
+          )
           : "",
     };
   }
@@ -170,13 +172,13 @@ function createInitialForm(
 
     priority: "medium",
 
-    trackingType: "binary",
+    trackingType: "quantity",
 
     /*
-     * Un hábito binario siempre
-     * tiene objetivo 1.
+     * Los hábitos nuevos comienzan
+     * como cuantificables.
      */
-    targetValue: "1",
+    targetValue: "",
 
     unit: "",
 
@@ -298,21 +300,36 @@ export function HabitForm({
   function handleIconChange(
     icon: string,
   ) {
+    const selectedOption =
+      getHabitIconOption(icon);
+
     setForm(
       (current) => ({
         ...current,
+
         icon,
+
+        /*
+         * Los iconos predefinidos asignan
+         * automáticamente su categoría.
+         *
+         * "Otro" utiliza category: null,
+         * por lo que dejamos el campo vacío
+         * para que el usuario lo escriba.
+         */
+        category:
+          selectedOption.category ??
+          "",
       }),
     );
 
-    if (errors.icon) {
-      setErrors(
-        (current) => ({
-          ...current,
-          icon: undefined,
-        }),
-      );
-    }
+    setErrors(
+      (current) => ({
+        ...current,
+        icon: undefined,
+        category: undefined,
+      }),
+    );
   }
 
   function handleTrackingTypeChange(
@@ -365,13 +382,13 @@ export function HabitForm({
 
           targetValue:
             current.trackingType ===
-            "quantity"
+              "quantity"
               ? current.targetValue
               : "",
 
           unit:
             current.trackingType ===
-            "quantity"
+              "quantity"
               ? current.unit
               : "",
         };
@@ -442,13 +459,13 @@ export function HabitForm({
           customDays:
             selected
               ? current.customDays.filter(
-                  (item) =>
-                    item !== day
-                )
+                (item) =>
+                  item !== day
+              )
               : [
-                  ...current.customDays,
-                  day,
-                ],
+                ...current.customDays,
+                day,
+              ],
         };
       }
     );
@@ -497,7 +514,7 @@ export function HabitForm({
         validData.description ||
         undefined,
 
-    category:
+      category:
         validData.category ||
         undefined,
 
@@ -509,7 +526,7 @@ export function HabitForm({
 
       customDays:
         validData.frequency ===
-        "custom"
+          "custom"
           ? validData.customDays
           : [],
 
@@ -521,17 +538,17 @@ export function HabitForm({
 
       targetValue:
         validData.trackingType ===
-        "binary"
+          "binary"
           ? 1
           : Number(
-              validData.targetValue
-            ),
+            validData.targetValue
+          ),
 
       unit:
         validData.trackingType ===
-        "quantity"
+          "quantity"
           ? validData.unit ||
-            undefined
+          undefined
           : undefined,
 
       startDate:
@@ -648,7 +665,7 @@ export function HabitForm({
               minRows={2}
               fullWidth
             />
-                    <Box>
+            <Box>
               <HabitIconSelector
                 value={form.icon}
                 onChange={
@@ -670,6 +687,27 @@ export function HabitForm({
                 </Typography>
               ) : null}
             </Box>
+            {getHabitIconOption(
+              form.icon,
+            ).category === null ? (
+              <TextField
+                label="Categoría personalizada"
+                value={form.category}
+                onChange={
+                  handleTextChange(
+                    "category",
+                  )
+                }
+                error={
+                  !!errors.category
+                }
+                helperText={
+                  errors.category ??
+                  "Escribe la categoría del hábito"
+                }
+                fullWidth
+              />
+            ) : null}
             {/*
              * Tipo de seguimiento
              */}
@@ -697,18 +735,18 @@ export function HabitForm({
                   gap: 1,
 
                   "& .MuiToggleButtonGroup-grouped":
-                    {
-                      border:
-                        "1px solid",
+                  {
+                    border:
+                      "1px solid",
 
-                      borderColor:
-                        "divider",
+                    borderColor:
+                      "divider",
 
-                      borderRadius:
-                        "999px !important",
+                    borderRadius:
+                      "999px !important",
 
-                      px: 2.5,
-                    },
+                    px: 2.5,
+                  },
                 }}
               >
                 <ToggleButton
@@ -726,7 +764,7 @@ export function HabitForm({
 
               <FormHelperText>
                 {form.trackingType ===
-                "binary"
+                  "binary"
                   ? "Se completa con una sola acción, por ejemplo: tender la cama."
                   : "Permite registrar avances hasta alcanzar un objetivo, por ejemplo: 2000 ml de agua."}
               </FormHelperText>
@@ -738,16 +776,16 @@ export function HabitForm({
              * cuantificables.
              */}
             {form.trackingType ===
-            "quantity" ? (
+              "quantity" ? (
               <Box
                 sx={{
                   display: "grid",
 
                   gridTemplateColumns:
-                    {
-                      xs: "1fr",
-                      sm: "1fr 1fr",
-                    },
+                  {
+                    xs: "1fr",
+                    sm: "1fr 1fr",
+                  },
 
                   gap: 2,
                 }}
@@ -828,18 +866,18 @@ export function HabitForm({
                   gap: 1,
 
                   "& .MuiToggleButtonGroup-grouped":
-                    {
-                      border:
-                        "1px solid",
+                  {
+                    border:
+                      "1px solid",
 
-                      borderColor:
-                        "divider",
+                    borderColor:
+                      "divider",
 
-                      borderRadius:
-                        "999px !important",
+                    borderRadius:
+                      "999px !important",
 
-                      px: 2.5,
-                    },
+                    px: 2.5,
+                  },
                 }}
               >
                 <ToggleButton
@@ -869,7 +907,7 @@ export function HabitForm({
             </Box>
 
             {form.frequency ===
-            "custom" ? (
+              "custom" ? (
               <FormControl
                 error={
                   !!errors.customDays
@@ -924,32 +962,14 @@ export function HabitForm({
                 display: "grid",
 
                 gridTemplateColumns:
-                  {
-                    xs: "1fr",
-                    sm: "1fr 1fr",
-                  },
+                {
+                  xs: "1fr",
+                  sm: "1fr 1fr",
+                },
 
                 gap: 2,
               }}
             >
-              <TextField
-                label="Categoría"
-                value={
-                  form.category
-                }
-                onChange={
-                  handleTextChange(
-                    "category"
-                  )
-                }
-                error={
-                  !!errors.category
-                }
-                helperText={
-                  errors.category
-                }
-                fullWidth
-              />
 
               <FormControl
                 fullWidth
